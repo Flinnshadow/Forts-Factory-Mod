@@ -14,7 +14,6 @@ function Load()
 end
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
-    Log(saveName)
     if saveName == "mine" or saveName == "mine2" then
         ScheduleCall(2, SpawnMetal, deviceId)
     end
