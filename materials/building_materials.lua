@@ -99,10 +99,11 @@ if conveyor then
    conveyor.MinLength = 62
    conveyor.MaxLength = 160
    conveyor.MaxLinkLength = 180
-   conveyor.CanAttachToGround = false
+   --conveyor.CanAttachToGround = false
    conveyor.IsBehindDevices = false
    conveyor.SplashMultiplier = 0
    conveyor.MaxLinkLengthMultiplierInEditor = 4
+   conveyor.MaxAngle = 50
 
    --WarmUpTime = 10
    --WarmUpTimeDisabled = 12
@@ -111,7 +112,6 @@ if conveyor then
    --conveyor.KeyEndCapByDamage = true
    --Sprite = "energy_shield",
    --SpriteDeactivated = "materials/energy_shield_deactivated",
-   --conveyor.MaxAngle = 20
 
 
    table.insert(Materials, conveyor)

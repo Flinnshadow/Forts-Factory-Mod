@@ -1,11 +1,3 @@
---- forts API ---
-dofile(path .. "/scripts/utility/BetterLog.lua")
-dofile(path .. "/scripts/math/math.lua")
-dofile(path .. "/scripts/math/vector.lua")
-dofile(path .. "/scripts/gameplay-objects/items.lua")
-
-dofile("scripts/forts.lua")
-
 local gravity = 0
 GlobalId = 1
 
@@ -15,7 +7,6 @@ function Load()
 end
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
-    Log(saveName)
     if saveName == "mine" or saveName == "mine2" then
         ScheduleCall(2, SpawnMetal, deviceId)
     end
@@ -34,7 +25,7 @@ function SpawnMetal(deviceId)
             radius = 50 / 2,
             springConst = GetRandomInteger(200, 600, "springRand") * 10,
             dampening = GetRandomInteger(5, 15, "dampeningRand") * 5,
-            friction = 15,
+            friction = 5,
             staticFriction = 15,
 
         }
@@ -55,7 +46,7 @@ function OnKey(key, down)
             radius = 50 / 2,
             springConst = GetRandomInteger(200, 600, "springRand") * 10,
             dampening = GetRandomInteger(5, 15, "dampeningRand") * 5,
-            friction = 15,
+            friction = 5,
             staticFriction = 15,
 
         }
@@ -63,9 +54,6 @@ function OnKey(key, down)
         GlobalId = GlobalId + 1
     end
 end
-
-
-local conveyorSpeed = 120
 
 local lastUpdateTime = 0
 function OnUpdate(frame)
@@ -78,7 +66,6 @@ function OnUpdate(frame)
     lastUpdateTime = updateTime
     for i = 1, 2 do
         for key, Object in pairs(PhysicsObjects) do
-
             -- Euler integration
             Object.position = Object.position + (delta * 0.5 * Object.velocity)
             Object.velocity.y = Object.velocity.y + gravity * delta
@@ -92,21 +79,13 @@ function OnUpdate(frame)
             local snapResult = SnapToWorld(Object.position, Object.radius, SNAP_LINKS_FORE, -1, -1, "")
             local normal = snapResult.Normal
 
-            local platformVelocity = Vec2Average({NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB)})
+            local platformVelocity = Vec2Average({ NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB) })
             local materialSaveName = GetLinkMaterialSaveName(snapResult.NodeIdA, snapResult.NodeIdB)
 
 
 
             -- Perform collision in the frame of reference of the object that it is colliding with
             velocity = velocity - platformVelocity
-            local parallel = Vec3(normal.y, -normal.x, 0)
-            if materialSaveName == "Conveyor" then
-                velocity = velocity + conveyorSpeed * parallel
-            end
-            if materialSaveName == "ConveyorInverted" then
-                velocity = velocity - conveyorSpeed * parallel
-            end
-
 
 
             -- Helper vectors
@@ -117,14 +96,17 @@ function OnUpdate(frame)
             end
             local errorNormalized = Vec3(error.x / length, error.y / length, error.z / length)
             error = (Object.radius - length) * errorNormalized
-
+            local parallel = Vec3(normal.y, -normal.x, 0)
+            if materialSaveName == "Conveyor" then
+                velocity = velocity - 5 * parallel
+            end
 
 
             local velocityPerpToSurface = Vec2Dot(velocity, normal)
             local velocityParallelToSurface = Vec2Dot(velocity, parallel)
 
 
-             BetterLog(math.abs(velocityParallelToSurface))
+
             -- Spring force
             local force = Object.springConst * error - Object.dampening * velocityPerpToSurface * normal
 
@@ -132,30 +114,20 @@ function OnUpdate(frame)
             force = force - Object.friction * velocityParallelToSurface * parallel
             velocity = velocity + delta * force
 
-            -- Return back to world frame
+
             velocity = velocity + platformVelocity
-            if materialSaveName == "Conveyor" then
-                velocity = velocity - conveyorSpeed * parallel
-            end
-            if materialSaveName == "ConveyorInverted" then
-                velocity = velocity + conveyorSpeed * parallel
-            end
 
 
-            -- Set velocity
             Object.velocity = velocity
 
             -- Static friction
             if (math.abs(velocityParallelToSurface) < Object.staticFriction) then
                 Object.velocity = velocity - velocityParallelToSurface * parallel
+
+                if materialSaveName == "Conveyor" then
+                    Object.velocity = velocity - (velocityParallelToSurface + 5) * parallel
+                end
             end
-            
-            
         end
     end
-end
-
-function SpringDampenedForce(springConst, displacement, dampening, velocity)
-    local force = springConst * displacement - dampening * velocity
-    return force
 end
