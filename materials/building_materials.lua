@@ -75,10 +75,11 @@ if conveyor then
    conveyor.MinLength = 62
    conveyor.MaxLength = 160
    conveyor.MaxLinkLength = 180
-   CanAttachToGround = false
-   IsBehindDevices = false
-   SplashMultiplier = 10
-   MaxLinkLengthMultiplierInEditor = 4
+   conveyor.CanAttachToGround = false
+   conveyor.IsBehindDevices = false
+   conveyor.SplashMultiplier = 0
+   conveyor.MaxLinkLengthMultiplierInEditor = 4
+
    --WarmUpTime = 10
    --WarmUpTimeDisabled = 12
    --AttachesCladding = true
