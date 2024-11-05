@@ -1,7 +1,7 @@
 --- forts API ---
-dofile(path .. "/math.lua")
-dofile(path .. "/vector.lua")
-dofile(path .. "/BetterLog.lua")
+dofile(path .. "/scripts/math/math.lua")
+dofile(path .. "/scripts/math/vector.lua")
+dofile(path .. "/scripts/utility/BetterLog.lua")
 
 dofile("scripts/forts.lua")
 
