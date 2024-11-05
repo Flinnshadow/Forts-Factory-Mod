@@ -1,6 +1,9 @@
 --scripts/math/vector.lua
 
-
+function SpringDampenedForce(springConst, displacement, dampening, velocity)
+   local force = springConst * displacement - dampening * velocity
+   return force
+end
 
 function IsWithinDistance(vector1, vector2, distance)
     local dx = vector1.x - vector2.x
