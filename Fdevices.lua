@@ -15,7 +15,7 @@ Inserter = {
    InputDevice = Device1,
    OutputDevice = Device2,
    Length = 100,
-   CurrentContents = {},
+   Contents = {},
 }
 
 function LinkDevice(device1,device2)
