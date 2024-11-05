@@ -26,14 +26,38 @@ table.insert(Sprites,
 			{
 				Frames =
 				{
-					{ texture = path .. "/materials/conveyorBlueOn1.png", duration = 0.02},
-					{ texture = path .. "/materials/conveyorBlueOn2.png", duration = 0.02},
-                    { texture = path .. "/materials/conveyorBlueOn3.png", duration = 0.02},
-					{ texture = path .. "/materials/conveyorBlueOn4.png", duration = 0.02},
-                    { texture = path .. "/materials/conveyorBlueOn5.png", duration = 0.02},
-					{ texture = path .. "/materials/conveyorBlueOn6.png", duration = 0.02},
-                    { texture = path .. "/materials/conveyorBlueOn7.png", duration = 0.02},
-					{ texture = path .. "/materials/conveyorBlueOn8.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/normal/off1.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/normal/off2.png", duration = 0.02},
+                    { texture = path .. "/materials/tier1/normal/off3.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/normal/off4.png", duration = 0.02},
+                    { texture = path .. "/materials/tier1/normal/off5.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/normal/off6.png", duration = 0.02},
+                    { texture = path .. "/materials/tier1/normal/off7.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/normal/off8.png", duration = 0.02},
+					mipmap = true,
+					repeatS = true,
+				},
+			},
+		},
+	}
+)
+table.insert(Sprites,
+    {
+		Name = "conveyor-inverted",
+		States =
+		{
+			Normal =
+			{
+				Frames =
+				{
+					{ texture = path .. "/materials/tier1/inverted/off1.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/inverted/off2.png", duration = 0.02},
+                    { texture = path .. "/materials/tier1/inverted/off3.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/inverted/off4.png", duration = 0.02},
+                    { texture = path .. "/materials/tier1/inverted/off5.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/inverted/off6.png", duration = 0.02},
+                    { texture = path .. "/materials/tier1/inverted/off7.png", duration = 0.02},
+					{ texture = path .. "/materials/tier1/inverted/off8.png", duration = 0.02},
 					mipmap = true,
 					repeatS = true,
 				},
@@ -91,4 +115,11 @@ if conveyor then
 
 
    table.insert(Materials, conveyor)
+
+   conveyor2 = DeepCopy(conveyor)
+
+   conveyor2.SaveName = "ConveyorInverted"
+   conveyor2.sprite = "conveyor-inverted"
+   table.insert(Materials, conveyor2)
 end
+
