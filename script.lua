@@ -89,7 +89,14 @@ function OnUpdate(frame)
             local normal = snapResult.Normal
 
             local platformVelocity = Vec2Average({NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB)})
+            local materialSaveName = GetLinkMaterialSaveName(snapResult.NodeIdA, snapResult.NodeIdB)
+
+
+
+            -- Perform collision in the frame of reference of the object that it is colliding with
             velocity = velocity - platformVelocity
+
+
             -- Helper vectors
             local error = Object.position - snapResult.Position
             local length = error.length
@@ -99,8 +106,15 @@ function OnUpdate(frame)
             local errorNormalized = Vec3(error.x / length, error.y / length, error.z / length)
             error = (Object.radius - length) * errorNormalized
             local parallel = Vec3(normal.y, -normal.x, 0)
+            if materialSaveName == "Conveyor" then
+                velocity = velocity - 5 * parallel
+             end
+
+
             local velocityPerpToSurface = Vec2Dot(velocity, normal)
             local velocityParallelToSurface = Vec2Dot(velocity, parallel)
+
+
 
             -- Spring force
             local force = Object.springConst * error - Object.dampening * velocityPerpToSurface * normal
@@ -118,6 +132,11 @@ function OnUpdate(frame)
             -- Static friction
             if (math.abs(velocityParallelToSurface) < Object.staticFriction) then
                 Object.velocity = velocity - velocityParallelToSurface * parallel
+
+                if materialSaveName == "Conveyor" then
+                    Object.velocity = velocity - (velocityParallelToSurface + 5 ) * parallel
+                 end
+    
             end
             
             
