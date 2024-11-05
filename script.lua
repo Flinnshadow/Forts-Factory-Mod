@@ -34,7 +34,7 @@ function SpawnMetal(deviceId)
             springConst = GetRandomInteger(200, 600, "springRand") * 10,
             dampening = GetRandomInteger(5, 15, "dampeningRand") * 5,
             friction = 5,
-            staticFriction = 20,
+            staticFriction = 15,
 
         }
         table.insert(PhysicsObjects, Obj)
@@ -55,7 +55,7 @@ function OnKey(key, down)
             springConst = GetRandomInteger(200, 600, "springRand") * 10,
             dampening = GetRandomInteger(5, 15, "dampeningRand") * 5,
             friction = 5,
-            staticFriction = 20,
+            staticFriction = 15,
 
         }
         table.insert(PhysicsObjects, Obj)
@@ -77,28 +77,19 @@ function OnUpdate(frame)
 
             -- Euler integration
             Object.position = Object.position + (delta * 0.5 * Object.velocity)
-
             Object.velocity.y = Object.velocity.y + gravity * delta
-
             Object.position = Object.position + (delta * 0.5 * Object.velocity)
 
-            --local id = SpawnCircle(Object.position, Object.radius, White(), 0.04)
-            SetEffectPosition(Object.effectId, Object.position)
-            --SetEffectDirection(id, direction)
 
-            local snapResult = SnapToWorld(Object.position, Object.radius, SNAP_LINKS_FORE + SNAP_NODES, -1, -1, "")
-            --[[snapResult.Distance = math.huge
-      for key, Object2 in pairs(PhysicsObjects) do
-         if Object.id == Object2.id then continue end
-         Distance = Vec2Dist(Object.position, Object2.position) - Object.radius -Object2.radius
-         if 0 > Distance and snapResult.Distance > Distance then --TODO: apply some force to Object2, in case 3x hit eachother at once
-            snapResult.Position = Object2.position
-            snapResult.Normal = Vec2Normalize(Object.position - Object2.position)
-            snapResult.Distance = Distance
-         end
-      end]]
+            local velocity = Object.velocity
+
+            SetEffectPosition(Object.effectId, Object.position)
+
+            local snapResult = SnapToWorld(Object.position, Object.radius, SNAP_LINKS_FORE, -1, -1, "")
             local normal = snapResult.Normal
 
+            local platformVelocity = Vec2Average({NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB)})
+            velocity = velocity - platformVelocity
             -- Helper vectors
             local error = Object.position - snapResult.Position
             local length = error.length
@@ -108,20 +99,27 @@ function OnUpdate(frame)
             local errorNormalized = Vec3(error.x / length, error.y / length, error.z / length)
             error = (Object.radius - length) * errorNormalized
             local parallel = Vec3(normal.y, -normal.x, 0)
-            local velocityPerpToSurface = Vec2Dot(Object.velocity, normal)
-            local velocityParallelToSurface = Vec2Dot(Object.velocity, parallel)
+            local velocityPerpToSurface = Vec2Dot(velocity, normal)
+            local velocityParallelToSurface = Vec2Dot(velocity, parallel)
 
             -- Spring force
             local force = Object.springConst * error - Object.dampening * velocityPerpToSurface * normal
 
             -- Dynamic friction
             force = force - Object.friction * velocityParallelToSurface * parallel
-            Object.velocity = Object.velocity + delta * force
+            velocity = velocity + delta * force
+
+
+            velocity = velocity + platformVelocity
+
+
+            Object.velocity = velocity
 
             -- Static friction
             if (math.abs(velocityParallelToSurface) < Object.staticFriction) then
-                Object.velocity = Object.velocity - velocityParallelToSurface * parallel
+                Object.velocity = velocity - velocityParallelToSurface * parallel
             end
+            
             
         end
     end
