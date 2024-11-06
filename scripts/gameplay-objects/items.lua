@@ -50,7 +50,6 @@ function OnKey(key, down)
             dampening = 30,
             friction = 15,
             staticFriction = 15,
-
         }
         table.insert(PhysicsObjects, Obj)
         GlobalId = GlobalId + 1
@@ -75,14 +74,14 @@ function Update(frame)
 
         local velocity = Object.velocity
         local radius = Object.radius
-        local physicsStep = math.clamp(math.ceil((velocity.length * data.updateDelta) / (radius * 0.5)), 1, maxPhysicsStep)
+        local physicsStep = math.clamp(math.ceil((velocity.length * data.updateDelta) / (radius)), 1, maxPhysicsStep)
 
         local delta = data.updateDelta / physicsStep
 
 
         -- Physics steps
-        for i = 1, physicsStep do
-            
+        for i = 1, physicsStep do   
+
             -- Euler integration
             Object.position = Object.position + (delta * 0.5 * Object.velocity)
             Object.velocity.y = Object.velocity.y + gravity * delta
@@ -99,14 +98,24 @@ function Update(frame)
 
             local normal = snapResult.Normal
 
-            local platformVelocity = Vec2Average({ NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB) })
-            local materialSaveName = GetLinkMaterialSaveName(snapResult.NodeIdA, snapResult.NodeIdB)
 
+
+            local platformVelocity
+            if snapResult.Type == SNAP_TYPE_LINK then
+                platformVelocity= Vec2Average({ NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB) })
+            elseif snapResult.Type == SNAP_TYPE_NODE then
+                platformVelocity = NodeVelocity(snapResult.NodeIdA)
+
+            elseif snapResult.Type == SNAP_TYPE_NOTHING then continue end
+            
+            local materialSaveName = GetLinkMaterialSaveName(snapResult.NodeIdA, snapResult.NodeIdB)
 
 
             -- Perform collision in the frame of reference of the object that it is colliding with
             velocity = velocity - platformVelocity
             local parallel = Vec3(normal.y, -normal.x, 0)
+
+
             if materialSaveName == "Conveyor" then
                 velocity = velocity + conveyorSpeed * parallel
             end
@@ -132,7 +141,7 @@ function Update(frame)
 
 
             -- Spring force
-            local force = physicsStep * Object.springConst * error - Object.dampening * velocityPerpToSurface * normal
+            local force = Object.springConst * (physicsStep ^ 2) * error - Object.dampening * velocityPerpToSurface * normal
 
             -- Dynamic friction
             force = force - Object.friction * velocityParallelToSurface * parallel
