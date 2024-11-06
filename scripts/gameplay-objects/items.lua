@@ -172,7 +172,7 @@ function Update(frame)
 
 
             -- Spring force
-            local force = Object.springConst * (physicsStep ^ 2) * error - Object.dampening * velocityPerpToSurface * normal
+            local force = Object.springConst * (physicsStep ^ 2) * error - (Object.dampening * velocityPerpToSurface * normal)
 
             -- Dynamic friction
             force = force - Object.friction * velocityParallelToSurface * parallel
