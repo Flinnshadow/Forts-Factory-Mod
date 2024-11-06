@@ -3,8 +3,8 @@ GlobalItemIterator = 0
 PhysicsObjectLifeSpans = {}
 
 ItemDefinitions = {
-    [""] = {MaterialType = "DefaultMaterial"},
-    ["IronOre"] = {MaterialType = ""},
+    [""] = {MaterialType = "Dynamo"},
+    ["IronOre"] = {MaterialType = "DefaultMaterial"},
 }
 
 PhysicsObjects = {}
@@ -14,7 +14,6 @@ function Load()
 end
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
-    Log(saveName)
     if saveName == "mine" or saveName == "mine2" then
         ScheduleCall(2, SpawnMetal, deviceId)
     end
@@ -24,7 +23,7 @@ function CreateItem(pos,iType,extras)
     GlobalItemIterator = GlobalItemIterator + 1
     --if not pos then return end
     --extras == {velocity,inDevice,Direction}
-
+    iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
     local id = SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
     table.insert(PhysicsObjects,{
         effectId = id,
@@ -63,9 +62,9 @@ function SpawnMetal(deviceId)
     if DeviceExists(deviceId) then
         --Find Output
         pos = GetDevicePosition(deviceId) - Vec3(0, 130)
-        CreateItem(pos,"IronOre")
+        CreateItem(pos,"IronOre2")
         ScheduleCall(10, SpawnMetal, deviceId)
-        BetterLog(GlobalItemIterator)
+        -- if debug then BetterLog(GlobalItemIterator) end
     end
 end
 
