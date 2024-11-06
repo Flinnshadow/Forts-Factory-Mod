@@ -32,7 +32,7 @@ function SpawnMetal(deviceId)
         }
         table.insert(PhysicsObjects, Obj)
         GlobalId = GlobalId + 1
-        ScheduleCall(5, SpawnMetal, deviceId)
+        ScheduleCall(10, SpawnMetal, deviceId)
         BetterLog(GlobalId)
     end
 end

@@ -92,7 +92,7 @@ if conveyor then
    conveyor.SaveName = "Conveyor"
    conveyor.Sprite = "conveyor"
    conveyor.Node = ConveyorNode
-   conveyor.RenderOrder = 5
+   conveyor.RenderOrder = 7
    conveyor.EndCap = "conveyor-node"
    conveyor.EndLinkOffset = -1
    conveyor.KeySpriteByDamage = false
