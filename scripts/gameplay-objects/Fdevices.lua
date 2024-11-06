@@ -1,5 +1,17 @@
-Device = {
+--[[Device = {
    IsPhysical = true,
+   Id = 0,
+   PassiveMatChange = Value(0,0),
+   EnergyGridChange = 0,
+   LinkedDevices =   {{id = 0, consumer = true,producer = false,belt=false,displaysSideBySide = false}},
+   InputRequests =   {"IronOre"},
+   InputHitBox =     {position = Vec3(0,0), Size = Vec3(100,100)},
+   Inputs =          {position = Vec3(0,0), Requests = {"IronOre"}, Inputs = {id = 0}},
+   Outputs =         {position = Vec3(0,0), Outputs = {id = 0}},
+   OverFlowOutput =  {position = Vec3(0,0), Outputs = {id = 0}},
+}]]
+GlobalDeviceIterator = 0
+Device = {
    Id = 0,
    PassiveMatChange = Value(0,0),
    EnergyGridChange = 0,

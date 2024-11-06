@@ -1,9 +1,16 @@
 local gravity = 0
-GlobalId = 1
+GlobalItemIterator = 0
+PhysicsObjectLifeSpans = {}
+
+ItemDefinitions = {
+    [""] = {MaterialType = "DefaultMaterial"},
+    ["IronOre"] = {MaterialType = ""},
+}
 
 PhysicsObjects = {}
 function Load()
     gravity = GetConstant("Physics.Gravity")
+    ScheduleCall(30,DestroyItemViaLifespan)
 end
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
@@ -13,27 +20,52 @@ function OnDeviceCompleted(teamId, deviceId, saveName)
     end
 end
 
+function CreateItem(pos,iType,extras)
+    GlobalItemIterator = GlobalItemIterator + 1
+    --if not pos then return end
+    --extras == {velocity,inDevice,Direction}
+
+    local id = SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
+    table.insert(PhysicsObjects,{
+        effectId = id,
+        id = GlobalItemIterator,
+        position = pos,
+        velocity = Vec3(0, 0, 0),
+        radius = 50 / 2,
+        springConst = 800,
+        dampening = 30,
+        friction = 15,
+        staticFriction = 15,
+    })
+    table.insert(PhysicsObjectLifeSpans,-1,{Id = GlobalItemIterator,LifeSpan = 30}) --insert the PhysicsObjects sub table directly so I don't have to search for it when I want to remove it
+
+end
+
+function DestroyItemViaLifespan()
+    --SC to the next lowest lifespan in the list, if everything has 30s lifespan then the list can just go linearly
+    --else ScheduleCall(30,DestroyItemViaLifespan)
+end
+
+function ContainItem()
+
+end
+
+function ReleaseItem()
+
+end
+
+function DestroyItem()
+
+end
+
+
 function SpawnMetal(deviceId)
     if DeviceExists(deviceId) then
         --Find Output
         pos = GetDevicePosition(deviceId) - Vec3(0, 130)
-        local id = SpawnEffectEx(path .. "/effects/DefaultMaterial.lua", pos, Vec3(0, -1))
-        Obj = {
-            effectId = id,
-            id = GlobalId,
-            position = pos,
-            velocity = Vec3(0, 0, 0),
-            radius = 50 / 2,
-            springConst = 800,
-            dampening = 30,
-            friction = 15,
-            staticFriction = 15,
-
-        }
-        table.insert(PhysicsObjects, Obj)
-        GlobalId = GlobalId + 1
+        CreateItem(pos,"IronOre")
         ScheduleCall(10, SpawnMetal, deviceId)
-        BetterLog(GlobalId)
+        BetterLog(GlobalItemIterator)
     end
 end
 
@@ -42,7 +74,7 @@ function OnKey(key, down)
         local id = SpawnEffectEx(path .. "/effects/DefaultMaterial.lua", ProcessedMousePos(), Vec3(0, -1))
         Obj = {
             effectId = id,
-            id = GlobalId,
+            id = GlobalItemIterator,
             position = ProcessedMousePos(),
             velocity = Vec3(0, 0, 0),
             radius = 50 / 2,
@@ -52,7 +84,7 @@ function OnKey(key, down)
             staticFriction = 15,
         }
         table.insert(PhysicsObjects, Obj)
-        GlobalId = GlobalId + 1
+        GlobalItemIterator = GlobalItemIterator + 1
     end
 end
 
