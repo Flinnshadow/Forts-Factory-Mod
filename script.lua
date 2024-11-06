@@ -32,8 +32,8 @@ function SpawnMetal(deviceId)
             position = pos,
             velocity = Vec3(0, 0, 0),
             radius = 50 / 2,
-            springConst = GetRandomInteger(200, 600, "springRand") * 10,
-            dampening = GetRandomInteger(5, 15, "dampeningRand") * 5,
+            springConst = 800,
+            dampening = 30,
             friction = 15,
             staticFriction = 15,
 
@@ -41,6 +41,7 @@ function SpawnMetal(deviceId)
         table.insert(PhysicsObjects, Obj)
         GlobalId = GlobalId + 1
         ScheduleCall(5, SpawnMetal, deviceId)
+        BetterLog(GlobalId)
     end
 end
 
@@ -53,8 +54,8 @@ function OnKey(key, down)
             position = ProcessedMousePos(),
             velocity = Vec3(0, 0, 0),
             radius = 50 / 2,
-            springConst = GetRandomInteger(200, 600, "springRand") * 10,
-            dampening = GetRandomInteger(5, 15, "dampeningRand") * 5,
+            springConst = 800,
+            dampening = 30,
             friction = 15,
             staticFriction = 15,
 
@@ -64,35 +65,49 @@ function OnKey(key, down)
     end
 end
 
-
 local conveyorSpeed = 120
 
-local lastUpdateTime = 0
-function OnUpdate(frame)
-    if lastUpdateTime == 0 then
-        lastUpdateTime = GetRealTime()
-    end
-    local updateTime = GetRealTime()
 
-    local delta = (updateTime - lastUpdateTime) * 0.5
-    lastUpdateTime = updateTime
-    for i = 1, 2 do
-        for key, Object in pairs(PhysicsObjects) do
+local maxPhysicsStep = 8
 
+function Update(frame)
+    for key, Object in pairs(PhysicsObjects) do
+        
+        local deviceCheckSnapResult = SnapToWorld(Object.position, Object.radius * 3, SNAP_DEVICES, -1, -1, "")
+        if GetDeviceType(deviceCheckSnapResult.DeviceId) == "reactor" then
+            CancelEffect(Object.effectId)
+
+            continue
+        end
+
+
+        local velocity = Object.velocity
+        local radius = Object.radius
+        local physicsStep = math.clamp(math.ceil((velocity.length * data.updateDelta) / (radius * 0.5)), 1, maxPhysicsStep)
+
+        local delta = data.updateDelta / physicsStep
+
+
+        -- Physics steps
+        for i = 1, physicsStep do
+            
             -- Euler integration
             Object.position = Object.position + (delta * 0.5 * Object.velocity)
             Object.velocity.y = Object.velocity.y + gravity * delta
             Object.position = Object.position + (delta * 0.5 * Object.velocity)
 
 
+
             local velocity = Object.velocity
 
-            SetEffectPosition(Object.effectId, Object.position)
+            
 
             local snapResult = SnapToWorld(Object.position, Object.radius, SNAP_LINKS_FORE, -1, -1, "")
+
+
             local normal = snapResult.Normal
 
-            local platformVelocity = Vec2Average({NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB)})
+            local platformVelocity = Vec2Average({ NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB) })
             local materialSaveName = GetLinkMaterialSaveName(snapResult.NodeIdA, snapResult.NodeIdB)
 
 
@@ -124,9 +139,8 @@ function OnUpdate(frame)
             local velocityParallelToSurface = Vec2Dot(velocity, parallel)
 
 
-             BetterLog(math.abs(velocityParallelToSurface))
             -- Spring force
-            local force = Object.springConst * error - Object.dampening * velocityPerpToSurface * normal
+            local force = physicsStep * Object.springConst * error - Object.dampening * velocityPerpToSurface * normal
 
             -- Dynamic friction
             force = force - Object.friction * velocityParallelToSurface * parallel
@@ -149,13 +163,10 @@ function OnUpdate(frame)
             if (math.abs(velocityParallelToSurface) < Object.staticFriction) then
                 Object.velocity = velocity - velocityParallelToSurface * parallel
             end
-            
-            
         end
-    end
-end
 
-function SpringDampenedForce(springConst, displacement, dampening, velocity)
-    local force = springConst * displacement - dampening * velocity
-    return force
+
+
+        SetEffectPosition(Object.effectId, Object.position)
+    end
 end

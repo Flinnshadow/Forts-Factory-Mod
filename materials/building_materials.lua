@@ -119,7 +119,7 @@ if conveyor then
    conveyor2 = DeepCopy(conveyor)
 
    conveyor2.SaveName = "ConveyorInverted"
-   conveyor2.sprite = "conveyor-inverted"
+   conveyor2.Sprite = "conveyor-inverted"
    table.insert(Materials, conveyor2)
 end
 
