@@ -63,7 +63,7 @@ function SpawnMetal(deviceId)
         --Find Output
         pos = GetDevicePosition(deviceId) - Vec3(0, 130)
         CreateItem(pos,"IronOre2")
-        ScheduleCall(10, SpawnMetal, deviceId)
+        ScheduleCall(4*4*1.25, SpawnMetal, deviceId)
         -- if debug then BetterLog(GlobalItemIterator) end
     end
 end
