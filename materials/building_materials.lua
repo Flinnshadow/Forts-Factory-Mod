@@ -97,8 +97,29 @@ if conveyor then
    conveyor.EndLinkOffset = -1
    conveyor.KeySpriteByDamage = false
    conveyor.MinLength = 62
-   conveyor.MaxLength = 160
-   conveyor.MaxLinkLength = 180
+   conveyor.MaxLinkLength = 185
+   conveyor.MetalBuildCost = 0.8 --40
+   conveyor.MetalRepairCost = 0.5
+   conveyor.MetalReclaim = 0.7
+   conveyor.EnergyBuildCost = 2.5
+   conveyor.EnergyRepairCost = 4.5
+   conveyor.BuildTime = 6
+   conveyor.ScrapTime = 3
+   conveyor.RepairRateMultiplier = 1.5
+   conveyor.Mass = 0.35
+   conveyor.HitPoints = 200
+
+   PostCreateMaterialAlways = true -- usually only want to place one door at a time, can drag if not
+   PostCreateTargetSaveName = "bracing"
+   RecessionTargetSaveName = "backbracing"
+
+   -- this is needed so that doors are reported to the weapon recession call,
+   -- so the door is recognised and to avoid making some other structure into a door
+   DoorTargetSaveName = "door"
+   WeaponRecession = true -- only recess the armor into a door when in the way of a weapon
+
+   ArmorRemovalTargetSaveName = "bracing"
+   FogOfWarTargetSaveName = "bracing"
    --conveyor.CanAttachToGround = false
    conveyor.IsBehindDevices = false
    conveyor.SplashMultiplier = 0

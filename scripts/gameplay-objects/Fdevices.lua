@@ -50,9 +50,10 @@ end
 Device = {
     [deviceId] = {
     Id = 0,
-    DeviceId = 0,
     Update = function() --[[process Items]] end,
-    Destroyed = function() end,
+    Destroyed = function() UnLinkAllDevices = function() end end,
+    LinkDevice = function() end,
+    UnLinkDevice = function() end,
     --[[EMPed = function () end,
     EMPEnd = function () end,
     Repairing = function () end,

@@ -20,12 +20,13 @@ function OnDeviceCompleted(teamId, deviceId, saveName)
 end
 
 function CreateItem(pos,iType,extras)
+
     GlobalItemIterator = GlobalItemIterator + 1
     --if not pos then return end
     --extras == {velocity,inDevice,Direction}
-    iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
+    local iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
     local id = SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
-    table.insert(PhysicsObjects,{
+    local Obj = { --TODO: move any static variables to a item definition (ie the core insertion value)
         effectId = id,
         id = GlobalItemIterator,
         position = pos,
@@ -35,8 +36,10 @@ function CreateItem(pos,iType,extras)
         dampening = 30,
         friction = 15,
         staticFriction = 15,
-    })
-    table.insert(PhysicsObjectLifeSpans,-1,{Id = GlobalItemIterator,LifeSpan = 30}) --insert the PhysicsObjects sub table directly so I don't have to search for it when I want to remove it
+    }
+    PhysicsObjects[GlobalItemIterator] = Obj
+    ScheduleCall(30,DestroyItem,Obj,GlobalItemIterator)
+   -- table.insert(PhysicsObjectLifeSpans,-1,{Id = GlobalItemIterator,LifeSpan = 30}) --insert the PhysicsObjects sub table directly so I don't have to search for it when I want to remove it
 
 end
 
@@ -53,7 +56,9 @@ function ReleaseItem()
 
 end
 
-function DestroyItem()
+function DestroyItem(item,itemKey)
+    CancelEffect(item.effectId)
+    PhysicsObjects[itemKey] = nil
 
 end
 
@@ -63,27 +68,14 @@ function SpawnMetal(deviceId)
         --Find Output
         pos = GetDevicePosition(deviceId) - Vec3(0, 130)
         CreateItem(pos,"IronOre2")
-        ScheduleCall(4*4*1.25, SpawnMetal, deviceId)
+        ScheduleCall(16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
         -- if debug then BetterLog(GlobalItemIterator) end
     end
 end
 
 function OnKey(key, down)
     if key == "u" and down then
-        local id = SpawnEffectEx(path .. "/effects/DefaultMaterial.lua", ProcessedMousePos(), Vec3(0, -1))
-        Obj = {
-            effectId = id,
-            id = GlobalItemIterator,
-            position = ProcessedMousePos(),
-            velocity = Vec3(0, 0, 0),
-            radius = 50 / 2,
-            springConst = 800,
-            dampening = 30,
-            friction = 15,
-            staticFriction = 15,
-        }
-        table.insert(PhysicsObjects, Obj)
-        GlobalItemIterator = GlobalItemIterator + 1
+        CreateItem(ProcessedMousePos(),"IronOre2")
     end
 end
 
@@ -94,10 +86,12 @@ local maxPhysicsStep = 8
 
 function Update(frame)
     for key, Object in pairs(PhysicsObjects) do
-        
+
         local deviceCheckSnapResult = SnapToWorld(Object.position, Object.radius * 3, SNAP_DEVICES, -1, -1, "")
         if GetDeviceType(deviceCheckSnapResult.DeviceId) == "reactor" then
-            CancelEffect(Object.effectId)
+            --"IronOre" == Value(50,0)
+            AddResourcesContinuous(GetDeviceTeamIdActual(deviceCheckSnapResult.DeviceId), Value(50,0))
+            DestroyItem(Object,key)
 
             continue
         end
