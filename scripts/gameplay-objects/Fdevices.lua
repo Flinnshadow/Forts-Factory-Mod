@@ -36,16 +36,16 @@ end
 --Idea: every device produces 0.01 metal, if the metal gen changes from last frame check if any devices have changed state
 
 --[[
-Code(DEVICE, "DEVICE_CONSTRUCTION", 0)
-Code(DEVICE, "DEVICE_IDLE", 1)
-Code(DEVICE, "DEVICE_REPAIR", 2)
-Code(DEVICE, "DEVICE_SCRAP", 3)
-Code(DEVICE, "DEVICE_DELETE", 4)]]
+DEVICE_CONSTRUCTION
+DEVICE_IDLE
+DEVICE_REPAIR
+DEVICE_SCRAP
+DEVICE_DELETE
 function DeviceEMPed(id)
     if Devices[id].EMPed then
         Devices[id]:EMPed()
     end
-end
+end]]
 
 Device = {
     [deviceId] = {
