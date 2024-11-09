@@ -8,16 +8,6 @@ ItemDefinitions = {
 }
 
 PhysicsObjects = {}
-function Load()
-    gravity = GetConstant("Physics.Gravity")
-    ScheduleCall(30,DestroyItemViaLifespan)
-end
-
-function OnDeviceCompleted(teamId, deviceId, saveName)
-    if saveName == "mine" or saveName == "mine2" then
-        ScheduleCall(2, SpawnMetal, deviceId)
-    end
-end
 
 function CreateItem(pos,iType,extras)
 
@@ -62,29 +52,12 @@ function DestroyItem(item,itemKey)
 
 end
 
-
-function SpawnMetal(deviceId)
-    if DeviceExists(deviceId) then
-        --Find Output
-        pos = GetDevicePosition(deviceId) - Vec3(0, 130)
-        CreateItem(pos,"IronOre2")
-        ScheduleCall(16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
-        -- if debug then BetterLog(GlobalItemIterator) end
-    end
-end
-
-function OnKey(key, down)
-    if key == "u" and down then
-        CreateItem(ProcessedMousePos(),"IronOre2")
-    end
-end
-
 local conveyorSpeed = 120
 
 
 local maxPhysicsStep = 8
 
-function Update(frame)
+function UpdatePhysicsObjects()
     for key, Object in pairs(PhysicsObjects) do
 
         local deviceCheckSnapResult = SnapToWorld(Object.position, Object.radius * 3, SNAP_DEVICES, -1, -1, "")
@@ -105,7 +78,7 @@ function Update(frame)
 
 
         -- Physics steps
-        for i = 1, physicsStep do   
+        for i = 1, physicsStep do
 
             -- Euler integration
             Object.position = Object.position + (delta * 0.5 * Object.velocity)
@@ -116,7 +89,7 @@ function Update(frame)
 
             local velocity = Object.velocity
 
-            
+
 
             local snapResult = SnapToWorld(Object.position, Object.radius, SNAP_LINKS_FORE, -1, -1, "")
 
@@ -132,7 +105,7 @@ function Update(frame)
                 platformVelocity = NodeVelocity(snapResult.NodeIdA)
 
             elseif snapResult.Type == SNAP_TYPE_NOTHING then continue end
-            
+
             local materialSaveName = GetLinkMaterialSaveName(snapResult.NodeIdA, snapResult.NodeIdB)
 
 

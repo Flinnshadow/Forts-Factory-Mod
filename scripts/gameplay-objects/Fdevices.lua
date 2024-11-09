@@ -1,9 +1,48 @@
---[[Device = {
+GlobalModuleIterator = 0
+
+function OnKey(key, down)
+    if key == "u" and down then
+        CreateItem(ProcessedMousePos(),"IronOre2")
+    end
+end
+
+function SpawnMetal(deviceId)
+    if DeviceExists(deviceId) then
+        --Find Output
+        pos = GetDevicePosition(deviceId) - Vec3(0, 130)
+        CreateItem(pos,"IronOre2")
+        ScheduleCall(16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
+        -- if debug then BetterLog(GlobalItemIterator) end
+    end
+end
+
+function OnDeviceCompleted(teamId, deviceId, saveName)
+    if saveName == "mine" or saveName == "mine2" then
+        ScheduleCall(5, SpawnMetal, deviceId)
+        PhysicsObjects[GlobalModuleIterator] = ModuleCreationDefinitions["mine"]
+    end
+end
+
+function CreateModule() --Externally referred to as a device, alternative names for the virtual devices: Construct, Structure, Facility
+    
+end
+
+ModuleCreationDefinitions = {
+    ["mine"] = {
+        Id = 0,
+        Update = function() --[[process Items]] end,
+        Destroyed = function() UnLinkAllModules = function() end end,
+        LinkModule = function() end,
+        UnLinkModule = function() end,
+    }
+}
+
+--[[Module = {
    IsPhysical = true,
    Id = 0,
    PassiveMatChange = Value(0,0),
    EnergyGridChange = 0,
-   LinkedDevices =   {{id = 0, consumer = true,producer = false,belt=false,displaysSideBySide = false}},
+   LinkedModules =   {{id = 0, consumer = true,producer = false,belt=false,displaysSideBySide = false}},
    InputRequests =   {"IronOre"},
    InputHitBox =     {position = Vec3(0,0), Size = Vec3(100,100)},
    Inputs =          {position = Vec3(0,0), Requests = {"IronOre"}, Inputs = {id = 0}},
@@ -12,7 +51,7 @@
 }]]
 
 --[[function CreateFurnace(obj)
-    furn = Device.new
+    furn = Module.new
     furn:HitboxInput(Vec3(0,0))
     furn:Input(Vec3(0,0))
     furn:Output(Vec3(0,0))
@@ -21,12 +60,6 @@
         FindInput,FindOutput
     )
 end]]
-
-for key, value in pairs(Devices) do
-    Device:Update()
-end
-
-GlobalDeviceIterator = 0
 
 function EMPLands()
     if DeviceDisabled(deviceId) then DeviceEMPed(deviceId)end
@@ -41,19 +74,25 @@ DEVICE_IDLE
 DEVICE_REPAIR
 DEVICE_SCRAP
 DEVICE_DELETE
-function DeviceEMPed(id)
-    if Devices[id].EMPed then
-        Devices[id]:EMPed()
+function ModuleEMPed(id)
+    if Modules[id].EMPed then
+        Modules[id]:EMPed()
     end
 end]]
 
-Device = {
+--[[function ModuleHitbox()
+    
+end]]
+
+--Update: SC(ItemSlot1BecomesProccessed, timeRemainingForOtherEventAfterThisOne1,timeRemainingForOtherEvent2,timeRemainingForOtherEvent3)
+
+Module = {
     [deviceId] = {
     Id = 0,
     Update = function() --[[process Items]] end,
-    Destroyed = function() UnLinkAllDevices = function() end end,
-    LinkDevice = function() end,
-    UnLinkDevice = function() end,
+    Destroyed = function() UnLinkAllModules = function() end end,
+    LinkModule = function() end,
+    UnLinkModule = function() end,
     --[[EMPed = function () end,
     EMPEnd = function () end,
     Repairing = function () end,
@@ -65,11 +104,11 @@ Device = {
     }
 }
 
-Device = {
+Module = {
 
     Id = 0,
     EnergyGridChange = 0,
-    PassiveMaterialChange = Value(0,0),
+    PassiveMaterialChange = Value(0,0), -- only for virtual devices
     ProcessingMaterialChange = Value(0,0),
     ProcessingProgress = 0, -- likely want a SC batch call rather then a constantly updating individual timer
     InputHitBox =    {position = Vec3(0,0), size = Vec3(100,100)},
@@ -81,8 +120,8 @@ Device = {
 
     Update = function(self, inputRate, processTime, inputRequests)
         local obj = setmetatable({}, { __index = self })
-        GlobalDeviceIterator = GlobalDeviceIterator + 1
-        obj.Id = GlobalDeviceIterator
+        GlobalModuleIterator = GlobalModuleIterator + 1
+        obj.Id = GlobalModuleIterator
         obj.InputRate = inputRate
         obj.ProcessTime = processTime
         obj.InputRequests = inputRequests or {}
@@ -95,19 +134,19 @@ Device = {
 }
 
 Inserter = {
-    InputDevice = Device1,
-    OutputDevice = Device2,
+    InputModule = module1,
+    OutputModule = module2,
     Length = 100,
     Speed = 10,
     Contents = {["IronOre"] = 10},
 }
 
-function LinkDevice(device1,device2)
-   if device1.id == device2.id then return end
+function LinkModule(module1,module2)
+   if module1.id == device2.id then return end
    for i=1,2 do
-      apple = _G["device"..i]
-      apple2 = _G["device".. 3-i]
-      for key, value in pairs(apple.LinkedDevices) do
+      apple = _G["module"..i]
+      apple2 = _G["module".. 3-i]
+      for key, value in pairs(apple.LinkedModules) do
          if value.id == apple2.id then return end
       end
    end
