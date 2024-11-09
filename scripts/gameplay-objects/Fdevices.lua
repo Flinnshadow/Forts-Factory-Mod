@@ -10,7 +10,7 @@ function SpawnMetal(deviceId)
     if DeviceExists(deviceId) then
         --Find Output
         pos = GetDevicePosition(deviceId) - Vec3(0, 130)
-        CreateItem(pos,"IronOre2")
+        CreateItem(pos,"IronOre")
         ScheduleCall(16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
         -- if debug then BetterLog(GlobalItemIterator) end
     end
@@ -18,24 +18,28 @@ end
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
     if saveName == "mine" or saveName == "mine2" then
-        ScheduleCall(5, SpawnMetal, deviceId)
-        PhysicsObjects[GlobalModuleIterator] = ModuleCreationDefinitions["mine"]
+        CreateModule(deviceName,deviceId)
     end
 end
 
-function CreateModule() --Externally referred to as a device, alternative names for the virtual devices: Construct, Structure, Facility
-    
+function CreateModule(deviceName,deviceId) --Externally referred to as a device, alternative names for the virtual devices: Construct, Structure, Facility
+    GlobalModuleIterator = GlobalModuleIterator + 1
+    PhysicsObjects[GlobalModuleIterator] = DeepCopy(ModuleCreationDefinitions[deviceName])
+    PhysicsObjects[GlobalModuleIterator].Created(deviceId)
 end
 
 ModuleCreationDefinitions = {
     ["mine"] = {
         Id = 0,
+        Created = function(deviceId) Id = GlobalModuleIterator; ScheduleCall(5, SpawnMetal, deviceId) end,
         Update = function() --[[process Items]] end,
         Destroyed = function() UnLinkAllModules = function() end end,
         LinkModule = function() end,
         UnLinkModule = function() end,
     }
 }
+
+--TODO: test: Module:Update    Update() Log(self.apple)  end
 
 --[[Module = {
    IsPhysical = true,
