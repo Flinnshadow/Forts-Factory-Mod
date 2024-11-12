@@ -1,8 +1,9 @@
 GlobalModuleIterator = 0
+ExistingModules = {}
 
 function OnKey(key, down)
     if key == "u" and down then
-        CreateItem(ProcessedMousePos(),"IronOre2")
+        CreateItem(ProcessedMousePos(),"apple")
     end
 end
 
@@ -17,18 +18,20 @@ function SpawnMetal(deviceId)
 end
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
-    if saveName == "mine" or saveName == "mine2" then
-        CreateModule(deviceName,deviceId)
+    if ModuleCreationDefinitions[key] then
+        CreateModule(saveName,deviceId)
     end
 end
 
 function CreateModule(deviceName,deviceId) --Externally referred to as a device, alternative names for the virtual devices: Construct, Structure, Facility
     GlobalModuleIterator = GlobalModuleIterator + 1
-    PhysicsObjects[GlobalModuleIterator] = DeepCopy(ModuleCreationDefinitions[deviceName])
-    PhysicsObjects[GlobalModuleIterator].Created(deviceId)
+    ExistingModules[GlobalModuleIterator] = DeepCopy(ModuleCreationDefinitions[deviceName])
+    ExistingModules[GlobalModuleIterator].Created(deviceId)
 end
 
 ModuleCreationDefinitions = {
+    ["pumpjack"] = {
+    },
     ["mine"] = {
         Id = 0,
         Created = function(deviceId) Id = GlobalModuleIterator; ScheduleCall(5, SpawnMetal, deviceId) end,
@@ -36,7 +39,18 @@ ModuleCreationDefinitions = {
         Destroyed = function() UnLinkAllModules = function() end end,
         LinkModule = function() end,
         UnLinkModule = function() end,
-    }
+    },
+    ["mine2"] = {
+    },
+    ["furnace"] = {
+        InputItem = function() end,
+    },
+    ["steelfurnace"] = {
+    },
+    ["chemicalplant"] = {
+    },
+    ["constructor"] = {
+    },
 }
 
 --TODO: test: Module:Update    Update() Log(self.apple)  end
@@ -155,47 +169,3 @@ function LinkModule(module1,module2)
       end
    end
 end
-
---[[
--- Device Class with Initialization
-Device = {
-   Id = 0,
-   InputRate = 1, -- Items per second
-   ProcessTime = 5, -- Seconds needed to process an item
-   InputRequests = {"IronOre"}, -- Items it can take in
-   Inputs = {}, -- Current input storage
-   Outputs = {}, -- Processed items ready for output
-   LinkedInserters = {}, -- Connected inserters
-
-   -- Constructor for new device instance
-   new = function(self, id, inputRate, processTime, inputRequests)
-      local obj = setmetatable({}, { __index = self })
-      obj.Id = id
-      obj.InputRate = inputRate
-      obj.ProcessTime = processTime
-      obj.InputRequests = inputRequests or {}
-      obj.Inputs = {}
-      obj.Outputs = {}
-      obj.LinkedInserters = {}
-      return obj
-   end,
-
-   -- Process input items after ProcessTime
-   processItems = function(self, deltaTime)
-      for _, item in pairs(self.Inputs) do
-         item.time = (item.time or 0) + deltaTime
-         if item.time >= self.ProcessTime then
-            table.insert(self.Outputs, item.name)
-            item.time = 0
-         end
-      end
-   end,
-
-   -- Request items from inserters
-   requestItems = function(self)
-      for _, inserter in pairs(self.LinkedInserters) do
-         inserter:attemptTransfer(self)
-      end
-   end
-}
-]]
