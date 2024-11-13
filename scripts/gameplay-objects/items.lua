@@ -38,12 +38,12 @@ function DestroyItemViaLifespan()
     --else ScheduleCall(30,DestroyItemViaLifespan)
 end
 
-function ContainItem()
-
+function ContainItem(itemKey)
+    PhysicsObjects[itemKey] = nil
 end
 
-function ReleaseItem()
-
+function ReleaseItem(item,itemKey)
+    PhysicsObjects[itemKey] = item
 end
 
 function DestroyItem(item,itemKey)

@@ -1,6 +1,46 @@
 GlobalModuleIterator = 0
 ExistingModules = {}
 
+ModuleCreationDefinitions = {
+    ["pumpjack"] = {
+    },
+    ["mine"] = {
+        Id = 0,
+        Created = function(deviceId) Id = GlobalModuleIterator; ScheduleCall(5, SpawnMetal, deviceId) end,
+        Update = function() --[[process Items]] end,
+        Destroyed = function() UnLinkAllModules = function() end end,
+        LinkModule = function() end,
+        UnLinkModule = function() end,
+    },
+    ["mine2"] = {
+    },
+    ["furnace"] = {
+        InputItem = function() end,
+        InputBuffer = {},
+        OutputItem = function() end,
+        OutputBuffer = {},
+    },
+    ["steelfurnace"] = {
+    },
+    ["chemicalplant"] = {
+    },
+    ["constructor"] = {
+    },
+    ["inserter"] = {
+        InputModule = module1,
+        OutputModule = module2,
+        Length = 100,
+        Speed = 10,
+        Contents = {["IronOre"] = 10},
+        Update = function() --[[move items]] end,
+    },
+}
+
+function ModuleHitbox()
+    
+end
+
+--ContainItem()
 function OnKey(key, down)
     if key == "u" and down then
         CreateItem(ProcessedMousePos(),"apple")
@@ -18,7 +58,7 @@ function SpawnMetal(deviceId)
 end
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
-    if ModuleCreationDefinitions[key] then
+    if ModuleCreationDefinitions[saveName] then
         CreateModule(saveName,deviceId)
     end
 end
@@ -29,29 +69,7 @@ function CreateModule(deviceName,deviceId) --Externally referred to as a device,
     ExistingModules[GlobalModuleIterator].Created(deviceId)
 end
 
-ModuleCreationDefinitions = {
-    ["pumpjack"] = {
-    },
-    ["mine"] = {
-        Id = 0,
-        Created = function(deviceId) Id = GlobalModuleIterator; ScheduleCall(5, SpawnMetal, deviceId) end,
-        Update = function() --[[process Items]] end,
-        Destroyed = function() UnLinkAllModules = function() end end,
-        LinkModule = function() end,
-        UnLinkModule = function() end,
-    },
-    ["mine2"] = {
-    },
-    ["furnace"] = {
-        InputItem = function() end,
-    },
-    ["steelfurnace"] = {
-    },
-    ["chemicalplant"] = {
-    },
-    ["constructor"] = {
-    },
-}
+
 
 --TODO: test: Module:Update    Update() Log(self.apple)  end
 
@@ -151,13 +169,6 @@ Module = {
 
 }
 
-Inserter = {
-    InputModule = module1,
-    OutputModule = module2,
-    Length = 100,
-    Speed = 10,
-    Contents = {["IronOre"] = 10},
-}
 
 function LinkModule(module1,module2)
    if module1.id == device2.id then return end
