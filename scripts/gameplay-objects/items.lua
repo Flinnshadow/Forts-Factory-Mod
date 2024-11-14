@@ -72,6 +72,15 @@ function UpdatePhysicsObjects()
             end
         end
 
+--function ModuleInputHitboxUpdate()
+        for _, HB in pairs(ModuleInputHitboxes) do --TODO: use ordered hitboxes to optimize 
+            local pos = Object.position
+            if HB.MaxX > pos.x and HB.MinX < pos.x and HB.MaxY > pos.y and HB.MinY < pos.y then
+                HB.Module.InputItem(Object)
+            end
+        end
+--end
+
 
         local velocity = Object.velocity
         local radius = Object.radius

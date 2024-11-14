@@ -1,6 +1,10 @@
 GlobalModuleIterator = 0
 ExistingModules = {}
 
+GlobalInputHitboxIterator = 0
+ModuleInputHitboxes = {}
+
+
 ModuleCreationDefinitions = {
     ["pumpjack"] = {
     },
@@ -18,11 +22,14 @@ ModuleCreationDefinitions = {
     ["furnace"] = {
         Id = 0,
         DeviceId = 0,
-        Created = function(deviceId) Id = GlobalModuleIterator; DeviceId = deviceId; AddModuleInputHitbox(Id,GetDevicePosition(deviceId),100,GetDevicePosition,deviceId) end,
-        InputItem = function() end,
-        InputBuffer = {},
-        OutputItem = function() end,
-        OutputBuffer = {},
+        InputItem = function() --[[DestroyItem]]end,
+        Inputs = {{InputBuffer = {size = 1,"IronOre"}, Connections = { }, requests = {"IronOre"},--[[position = Vec3(0,0),]]}},
+        Outputs = {{OutputBuffer = {size = 1,"IronOre"}, Connections = { }, requests = {"IronPlate"},--[[position = Vec3(0,0),]]}},
+        Created = function(deviceId)
+            self.Id = GlobalModuleIterator; DeviceId = deviceId
+            AddModuleInputHitbox(self.Id,GetDevicePosition(deviceId),100,GetDevicePosition,deviceId)
+
+        end,
     },
     ["steelfurnace"] = {
     },
@@ -40,23 +47,22 @@ ModuleCreationDefinitions = {
     },
 }
 
-ModuleInputHitboxes = {}
-
 function AddModuleInputHitbox(id,pos,bounds,checkFunction,variable)
-    ModuleInputHitboxes[id]={
+    GlobalInputHitboxIterator = GlobalInputHitboxIterator + 1
+    ModuleInputHitboxes[GlobalInputHitboxIterator]={
         MaxX = pos.x+bounds.x,MaxY = pos+bounds.y,MinX = pos-bounds.x,MinY = pos-bounds.y,
         MaxXB = pos.x+30,MaxYB = pos+30,MinXB = pos-30,MinYB = pos-30,
-        Bounds=bounds, Pos = pos, CheckFunction = checkFunction,Variable = variable
+        Bounds=bounds, Pos = pos, CheckFunction = checkFunction,Variable = variable, Module = ExistingModules[id]
     }
 end
 
 function ModuleInputHitboxPositionUpdate()
-    for key, HB in pairs(ModuleInputHitboxes) do
+    for _, HB in pairs(ModuleInputHitboxes) do
         local pos = HB.CheckFunction(HB.Variable)
         if HB.MaxXB < pos.x or HB.MinXB > pos.x or HB.MaxYB < pos.y or HB.MinYB > pos.y then
             MaxX = pos.x+HB.Bounds.x MaxY = pos+HB.Bounds.y MinX = pos-HB.Bounds.x MinY = pos-HB.Bounds.y
             HB.MaxXB = pos.x+30 HB.MaxY = pos+30 HB.MinX = pos-30 HB.MinY = pos-30 HB.Pos = pos
-        end --There "needs" to be more then 1 HB per module
+        end
     end
 end
 
@@ -86,7 +92,7 @@ end
 function CreateModule(deviceName,deviceId) --Externally referred to as a device, alternative names for the virtual devices: Construct, Structure, Facility
     GlobalModuleIterator = GlobalModuleIterator + 1
     ExistingModules[GlobalModuleIterator] = DeepCopy(ModuleCreationDefinitions[deviceName])
-    ExistingModules[GlobalModuleIterator].Created(deviceId)
+    ExistingModules[GlobalModuleIterator]:Created(deviceId)
 end
 
 
