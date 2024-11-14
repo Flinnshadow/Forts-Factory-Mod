@@ -4,7 +4,8 @@ PhysicsObjectLifeSpans = {}
 
 ItemDefinitions = {
     [""] = {MaterialType = "Dynamo"},
-    ["IronOre"] = {MaterialType = "DefaultMaterial"},
+    ["IronOre"] = {MaterialType = "DefaultMaterial",CoreValue = Value(50,0)},
+    ["IronPlate"] = {MaterialType = "Bebop",CoreValue = Value(128,0)},
 }
 
 PhysicsObjects = {}
@@ -17,6 +18,7 @@ function CreateItem(pos,iType,extras)
     local iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
     local id = SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
     local Obj = { --TODO: move any static variables to a item definition (ie the core insertion value)
+        itemType = iType,
         effectId = id,
         id = GlobalItemIterator,
         position = pos,
@@ -62,11 +64,12 @@ function UpdatePhysicsObjects()
 
         local deviceCheckSnapResult = SnapToWorld(Object.position, Object.radius * 3, SNAP_DEVICES, -1, -1, "")
         if GetDeviceType(deviceCheckSnapResult.DeviceId) == "reactor" then
-            --"IronOre" == Value(50,0)
-            AddResourcesContinuous(GetDeviceTeamIdActual(deviceCheckSnapResult.DeviceId), Value(50,0))
-            DestroyItem(Object,key)
+            if ItemDefinitions[Object.itemType].CoreValue then
+                AddResourcesContinuous(GetDeviceTeamIdActual(deviceCheckSnapResult.DeviceId), ItemDefinitions[Object.itemType].CoreValue)
+                DestroyItem(Object,key)
 
-            continue
+                continue
+            end
         end
 
 

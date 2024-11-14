@@ -6,7 +6,8 @@ ModuleCreationDefinitions = {
     },
     ["mine"] = {
         Id = 0,
-        Created = function(deviceId) Id = GlobalModuleIterator; ScheduleCall(5, SpawnMetal, deviceId) end,
+        DeviceId = 0,
+        Created = function(deviceId) Id = GlobalModuleIterator; DeviceId = deviceId; ScheduleCall(5, SpawnMetal, deviceId) end,
         Update = function() --[[process Items]] end,
         Destroyed = function() UnLinkAllModules = function() end end,
         LinkModule = function() end,
@@ -15,6 +16,9 @@ ModuleCreationDefinitions = {
     ["mine2"] = {
     },
     ["furnace"] = {
+        Id = 0,
+        DeviceId = 0,
+        Created = function(deviceId) Id = GlobalModuleIterator; DeviceId = deviceId; AddModuleInputHitbox(Id,GetDevicePosition(deviceId),100,GetDevicePosition,deviceId) end,
         InputItem = function() end,
         InputBuffer = {},
         OutputItem = function() end,
@@ -36,8 +40,24 @@ ModuleCreationDefinitions = {
     },
 }
 
-function ModuleHitbox()
-    
+ModuleInputHitboxes = {}
+
+function AddModuleInputHitbox(id,pos,bounds,checkFunction,variable)
+    ModuleInputHitboxes[id]={
+        MaxX = pos.x+bounds.x,MaxY = pos+bounds.y,MinX = pos-bounds.x,MinY = pos-bounds.y,
+        MaxXB = pos.x+30,MaxYB = pos+30,MinXB = pos-30,MinYB = pos-30,
+        Bounds=bounds, Pos = pos, CheckFunction = checkFunction,Variable = variable
+    }
+end
+
+function ModuleInputHitboxPositionUpdate()
+    for key, HB in pairs(ModuleInputHitboxes) do
+        local pos = HB.CheckFunction(HB.Variable)
+        if HB.MaxXB < pos.x or HB.MinXB > pos.x or HB.MaxYB < pos.y or HB.MinYB > pos.y then
+            MaxX = pos.x+HB.Bounds.x MaxY = pos+HB.Bounds.y MinX = pos-HB.Bounds.x MinY = pos-HB.Bounds.y
+            HB.MaxXB = pos.x+30 HB.MaxY = pos+30 HB.MinX = pos-30 HB.MinY = pos-30 HB.Pos = pos
+        end --There "needs" to be more then 1 HB per module
+    end
 end
 
 --ContainItem()
