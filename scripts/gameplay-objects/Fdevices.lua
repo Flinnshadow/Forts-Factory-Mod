@@ -147,25 +147,25 @@ end]]
 end]]
 
 --Update: SC(ItemSlot1BecomesProccessed, timeRemainingForOtherEventAfterThisOne1,timeRemainingForOtherEvent2,timeRemainingForOtherEvent3)
-
+--[[
 Module = {
     [deviceId] = {
     Id = 0,
-    Update = function() --[[process Items]] end,
+    Update = function()  end,
     Destroyed = function() UnLinkAllModules = function() end end,
     LinkModule = function() end,
     UnLinkModule = function() end,
-    --[[EMPed = function () end,
+    --[=[EMPed = function () end,
     EMPEnd = function () end,
     Repairing = function () end,
     RepairEnd = function () end,
     Scrapping = function () end,
     ScrappingEnd = function () end,
     Disabled = function () end,
-    DisableEnd = function () end,]]
+    DisableEnd = function () end,]=]
     }
-}
-
+}]]
+--[[
 Module = {
 
     Id = 0,
@@ -193,9 +193,9 @@ Module = {
         return obj
     end,
 
-}
+}]]
 
-
+--[[
 function LinkModule(module1,module2)
    if module1.id == device2.id then return end
    for i=1,2 do
@@ -205,4 +205,4 @@ function LinkModule(module1,module2)
          if value.id == apple2.id then return end
       end
    end
-end
+end]]

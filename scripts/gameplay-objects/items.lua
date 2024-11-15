@@ -1,6 +1,26 @@
-local gravity = 0
+gravity = 0
 GlobalItemIterator = 0
 PhysicsObjectLifeSpans = {}
+
+function OnKey(key, down)
+    if key == "u" and down then
+        CreateItem(ProcessedMousePos(),"apple")
+    end
+end
+
+function SpawnMetal(deviceId)
+    if DeviceExists(deviceId) then
+        --Find Output
+        pos = GetDevicePosition(deviceId) - Vec3(0, 130)
+        CreateItem(pos,"IronOre")
+        ScheduleCall(16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
+        -- if debug then BetterLog(GlobalItemIterator) end
+    end
+end
+
+function OnDeviceCompleted(teamId, deviceId, saveName)
+        SpawnMetal(deviceId)
+end
 
 ItemDefinitions = {
     [""] = {MaterialType = "Dynamo"},
@@ -72,19 +92,11 @@ function UpdatePhysicsObjects()
             end
         end
 
---function ModuleInputHitboxUpdate()
-        for _, HB in pairs(ModuleInputHitboxes) do --TODO: use ordered hitboxes to optimize 
-            local pos = Object.position
-            if HB.MaxX > pos.x and HB.MinX < pos.x and HB.MaxY > pos.y and HB.MinY < pos.y then
-                HB.Module.InputItem(Object)
-            end
-        end
---end
 
 
         local velocity = Object.velocity
         local radius = Object.radius
-        local physicsStep = math.clamp(math.ceil((velocity.length * data.updateDelta) / (radius)), 1, maxPhysicsStep)
+        local physicsStep = math.clamp(math.ceil((velocity.length() * data.updateDelta) / (radius)), 1, maxPhysicsStep)
 
         local delta = data.updateDelta / physicsStep
 
@@ -137,7 +149,7 @@ function UpdatePhysicsObjects()
 
             -- Helper vectors
             local error = Object.position - snapResult.Position
-            local length = error.length
+            local length = error.length()
             if (length == 0) then
                 continue
             end
