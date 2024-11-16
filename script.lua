@@ -18,11 +18,33 @@ function Update(frame)
 
     UpdatePhysicsObjects()
 
-    for key, apple in pairs(ExistingModules) do
-        apple:GrabItemsAutomatically()
-        apple:UpdateCrafting()
+    for _, module in pairs(ExistingModules) do
+        module:GrabItemsAutomatically()
+        module:UpdateCrafting()
+        if module.deviceId then
+            local pos = GetDevicePosition(module.deviceId)
+            if module.inputHitbox then
+                module.inputHitbox:UpdatePosition(pos)
+            end
+            if module.outputHitbox then
+                module.outputHitbox:UpdatePosition(pos)
+            end
+        end
     end
-    --[[for key, Device in pairs(Devices) do
-        Device:Update()
-    end]]
+
+    for _, inserter in pairs(ExistingInserters) do
+        inserter:Update(frame)
+        if inserter.inputNode then
+            local pos = NodePosition(inserter.inputNode)
+            if inserter.inputHitbox then
+                inserter.inputHitbox:UpdatePosition(pos)
+            end
+        end
+        if inserter.outputNode then
+            local pos = NodePosition(inserter.outputNode)
+            if inserter.outputHitbox then
+                inserter.outputHitbox:UpdatePosition(pos)
+            end
+        end
+    end
 end

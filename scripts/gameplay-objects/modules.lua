@@ -1,6 +1,52 @@
 GlobalModuleIterator = 0
+
+ModuleCreationDefinitions = {
+    ["pumpjack"] = {
+    },
+    ["mine"] = {
+        Id = 0,
+        DeviceId = 0,
+        Created = function(deviceId) Id = GlobalModuleIterator; DeviceId = deviceId; ScheduleCall(5, SpawnMetal, deviceId) end,
+        Update = function() --[[process Items]] end,
+        Destroyed = function() UnLinkAllModules = function() end end,
+        LinkModule = function() end,
+        UnLinkModule = function() end,
+    },
+    ["mine2"] = {
+    },
+    ["furnace"] = {
+        Id = 0,
+        DeviceId = 0,
+        InputItem = function() --[[DestroyItem]]end,
+        Inputs = {{InputBuffer = {size = 1,"IronOre"}, Connections = { }, requests = {"IronOre"},--[[position = Vec3(0,0),]]}},
+        Outputs = {{OutputBuffer = {size = 1,"IronOre"}, Connections = { }, requests = {"IronPlate"},--[[position = Vec3(0,0),]]}},
+        Created = function(deviceId)
+            self.Id = GlobalModuleIterator; DeviceId = deviceId
+            AddModuleInputHitbox(self.Id,GetDevicePosition(deviceId),100,GetDevicePosition,deviceId)
+
+        end,
+    },
+    ["steelfurnace"] = {
+    },
+    ["chemicalplant"] = {
+    },
+    ["constructor"] = {
+    },
+    ["inserter"] = {
+        InputModule = module1,
+        OutputModule = module2,
+        Length = 100,
+        Speed = 10,
+        Contents = {["IronOre"] = 10},
+        Update = function() --[[move items]] end,
+    },
+}
+
 function OnKey(key, down)
     if key == "u" and down then
+        CreateItem(ProcessedMousePos(),"apple")
+    end
+    if key == "i" and down then
         CreateItem(ProcessedMousePos(),"apple")
     end
 end
@@ -10,7 +56,7 @@ function SpawnMetal(deviceId)
         --Find Output
         pos = GetDevicePosition(deviceId) - Vec3(0, 130)
         CreateItem(pos,"IronOre")
-        ScheduleCall(16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
+        ScheduleCall(16/16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
         -- if debug then BetterLog(GlobalItemIterator) end
     end
 end
@@ -23,10 +69,9 @@ end
 
 function CreateModule(deviceName,deviceId) --Externally referred to as a device, alternative names for the virtual devices: Construct, Structure, Facility
     GlobalModuleIterator = GlobalModuleIterator + 1
-    Log("1")
-    apple = Module:new()
+    apple = Module:New(deviceId)
     ExistingModules[GlobalModuleIterator] = apple
-    apple:AddInputBuffer(10, {["IronOre"]= true}, Hitbox:new(GetDevicePosition(deviceId), Vec3(100, 100)))
+    apple:AddInputBuffer(10, {["IronOre"]= true}, Hitbox:New(GetDevicePosition(deviceId), Vec3(100, 100)))
     ScheduleCall(5, SpawnMetal, deviceId)
     BetterLog(apple)
 end
@@ -45,7 +90,7 @@ Module = {
     baseCraftingTime = 100, -- default crafting time (modifiable)
 }
 
-function Module:new(deviceId)
+function Module:New(deviceId)
     local module = {}
     setmetatable(module, self)
     self.__index = self
@@ -155,6 +200,7 @@ function Module:GrabItemsAutomatically()
 end
 
 
+
 -- Define a Hitbox with Collision Checking
 Hitbox = {
     maxX = 0,
@@ -163,7 +209,7 @@ Hitbox = {
     minY = 0
 }
 
-function Hitbox:new(pos, size)
+function Hitbox:New(pos, size)
     local hb = {}
     setmetatable(hb, self)
     self.__index = self
@@ -174,36 +220,115 @@ function Hitbox:new(pos, size)
     return hb
 end
 
+function Hitbox:UpdatePosition(pos)
+    self.maxX = pos.x + self.size.x
+    self.maxY = pos.y + self.size.y
+    self.minX = pos.x - self.size.x
+    self.minY = pos.y - self.size.y
+end
+
 function Hitbox:CheckCollision(pos)
     return pos.x < self.maxX and pos.x > self.minX and pos.y < self.maxY and pos.y > self.minY
 end
+
+ExistingInserters = {}
 
 -- Inserter Class with Connection Logic
 Inserter = {
     inputModule = nil,
     outputModule = nil,
+    inputNode = nil,
+    outputNode = nil,
     speed = 10,
-    contents = {}
+    contents = {},
+    transferTime = 0,
+    transferDuration = 0, -- duration in seconds for a transfer
+    currentPosition = {x = 0, y = 0},
+    startPosition = {x = 0, y = 0},
+    endPosition = {x = 0, y = 0},
+    itemSpacing = 0.1, -- minimum distance between items
+    inputHitbox = nil
 }
 
-function Inserter:ConnectModules(inputModule, outputModule)
-    self.inputModule = inputModule
-    self.outputModule = outputModule
+function Inserter:New(o, speed)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    o.speed = speed or 10
+    o.contents = {}
+    o.transferTime = 0
+    o.transferDuration = 0
+    o.currentPosition = {x = 0, y = 0}
+    o.startPosition = {x = 0, y = 0}
+    o.endPosition = {x = 0, y = 0}
+    o.itemSpacing = self.itemSpacing
+    o.inputHitbox = nil
+    return o
 end
 
-function Inserter:TransferItem(itemType)
-    if self.outputModule and self.inputModule then
-        local targetBuffer = self.outputModule:FindBuffer("input", itemType)
-        if targetBuffer and #targetBuffer.items < targetBuffer.maxSize then
-            table.insert(targetBuffer.items, itemType)
-            BetterLog("Transferring item: " .. itemType .. " to output module")
+function Inserter:ConnectModules(input, output)
+    if input.position then
+        self.inputModule = input
+        self.inputNode = nil
+        self.startPosition = input.position
+    else
+        self.inputNode = input
+        self.inputModule = nil
+        self.startPosition = input.position
+        self.inputHitbox = Hitbox:New(input.position, {x = 50, y = 50})
+    end
+
+    if output.position then
+        self.outputModule = output
+        self.outputNode = nil
+        self.endPosition = output.position
+    else
+        self.outputNode = output
+        self.outputModule = nil
+        self.endPosition = output.position
+    end
+
+    self:CalculateTransferDuration()
+end
+
+function Inserter:CalculateTransferDuration()
+    local dx = self.endPosition.x - self.startPosition.x
+    local dy = self.endPosition.y - self.startPosition.y
+    local distance = math.sqrt(dx * dx + dy * dy)
+    self.transferDuration = distance / self.speed
+end
+
+function Inserter:TransferItems(itemTypes)
+    if self.outputModule then
+        for _, itemType in ipairs(itemTypes) do
+            local targetBuffer = self.outputModule:FindBuffer("input", itemType)
+            if targetBuffer and #targetBuffer.items < targetBuffer.maxSize then
+                table.insert(targetBuffer.items, itemType)
+                BetterLog("Transferring item: " .. itemType .. " to output module")
+            end
         end
+    elseif self.outputNode then
+        -- Handle transfer to output node if needed
+        BetterLog("Transferring items to output node")
     end
 end
 
 function Inserter:Update()
-    -- Insert logic to handle collision and transfer animation/effects
-    for _, item in pairs(self.contents) do
-        self:TransferItem(item)
+    if self.transferTime > 0 then
+        self.transferTime = self.transferTime - data.updateDelta
+        local progress = 1 - (self.transferTime / self.transferDuration)
+        self.currentPosition.x = self.startPosition.x + (self.endPosition.x - self.startPosition.x) * progress
+        self.currentPosition.y = self.startPosition.y + (self.endPosition.y - self.startPosition.y) * progress
+    else
+        if #self.contents > 0 then
+            local itemsToTransfer = {}
+            local itemsToRemove = math.min(#self.contents, math.floor(self.speed * dt / self.itemSpacing))
+            for i = 1, itemsToRemove do
+                table.insert(itemsToTransfer, table.remove(self.contents, 1))
+            end
+            self:TransferItems(itemsToTransfer)
+            self.transferTime = self.transferDuration
+            self.currentPosition = self.startPosition
+        end
     end
 end
