@@ -3,29 +3,14 @@ GlobalModuleIterator = 0
 ModuleCreationDefinitions = {
     ["pumpjack"] = {
     },
-    ["mine"] = {
-        Id = 0,
-        DeviceId = 0,
-        Created = function(deviceId) Id = GlobalModuleIterator; DeviceId = deviceId; ScheduleCall(5, SpawnMetal, deviceId) end,
-        Update = function() --[[process Items]] end,
-        Destroyed = function() UnLinkAllModules = function() end end,
-        LinkModule = function() end,
-        UnLinkModule = function() end,
-    },
+    ["mine"] = function (newModule)
+        newModule:AddOutputBuffer(2,"IronOre")
+    end,
     ["mine2"] = {
     },
-    ["furnace"] = {
-        Id = 0,
-        DeviceId = 0,
-        InputItem = function() --[[DestroyItem]]end,
-        Inputs = {{InputBuffer = {size = 1,"IronOre"}, Connections = { }, requests = {"IronOre"},--[[position = Vec3(0,0),]]}},
-        Outputs = {{OutputBuffer = {size = 1,"IronOre"}, Connections = { }, requests = {"IronPlate"},--[[position = Vec3(0,0),]]}},
-        Created = function(deviceId)
-            self.Id = GlobalModuleIterator; DeviceId = deviceId
-            AddModuleInputHitbox(self.Id,GetDevicePosition(deviceId),100,GetDevicePosition,deviceId)
-
-        end,
-    },
+    ["furnace"] = function (newModule,deviceId)
+        Module:AddInputBuffer(6,"IronOre",Hitbox:New(GetDevicePosition(deviceId)+Vec3(1,0), Vec3(100, 100)))
+    end,
     ["steelfurnace"] = {
     },
     ["chemicalplant"] = {
@@ -33,12 +18,7 @@ ModuleCreationDefinitions = {
     ["constructor"] = {
     },
     ["inserter"] = {
-        InputModule = module1,
-        OutputModule = module2,
-        Length = 100,
-        Speed = 10,
-        Contents = {["IronOre"] = 10},
-        Update = function() --[[move items]] end,
+
     },
 }
 
@@ -62,15 +42,66 @@ function SpawnMetal(deviceId)
 end
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
-    --if ModuleCreationDefinitions[saveName] then
+    if ModuleCreationDefinitions[saveName] then
         CreateModule(saveName,deviceId)
-    --end
+    end
+end
+
+function UpdateModules()
+    for _, module in pairs(ExistingModules) do
+        module:GrabItemsAutomatically()
+        module:UpdateCrafting()
+        if module.deviceId then
+            local pos = GetDevicePosition(module.deviceId)
+            local angle = GetDeviceAngle(module.deviceId)
+            for _, buffer in ipairs(module.inputBuffers) do
+                if buffer.hitbox then
+                    local bufferPos = RotatePosition(buffer.relativePosition, angle)
+                    bufferPos.x = pos.x + bufferPos.x
+                    bufferPos.y = pos.y + bufferPos.y
+                    buffer.hitbox:UpdatePosition(bufferPos)
+                end
+            end
+            for _, buffer in ipairs(module.outputBuffers) do
+                if buffer.hitbox then
+                    local bufferPos = RotatePosition(buffer.relativePosition, angle)
+                    bufferPos.x = pos.x + bufferPos.x
+                    bufferPos.y = pos.y + bufferPos.y
+                    buffer.hitbox:UpdatePosition(bufferPos)
+                end
+            end
+        end
+    end
+
+    for _, inserter in pairs(ExistingInserters) do
+        inserter:Update()
+        if inserter.inputNode then
+            local pos = NodePosition(inserter.inputNode)
+            if inserter.inputHitbox then
+                inserter.inputHitbox:UpdatePosition(pos)
+            end
+        end
+        if inserter.outputNode then
+            local pos = NodePosition(inserter.outputNode)
+            if inserter.outputHitbox then
+                inserter.outputHitbox:UpdatePosition(pos)
+            end
+        end
+    end
+end
+
+function RotatePosition(position, angle)
+    local cosAngle = math.cos(angle)
+    local sinAngle = math.sin(angle)
+    return {
+        x = position.x * cosAngle - position.y * sinAngle,
+        y = position.x * sinAngle + position.y * cosAngle
+    }
 end
 
 function CreateModule(deviceName,deviceId) --Externally referred to as a device, alternative names for the virtual devices: Construct, Structure, Facility
-    GlobalModuleIterator = GlobalModuleIterator + 1
-    apple = Module:New(deviceId)
-    ExistingModules[GlobalModuleIterator] = apple
+    local newModule = Module:New(deviceId)
+    ModuleCreationDefinitions[deviceName](newModule,deviceId)
     apple:AddInputBuffer(10, {["IronOre"]= true}, Hitbox:New(GetDevicePosition(deviceId), Vec3(100, 100)))
     ScheduleCall(5, SpawnMetal, deviceId)
     BetterLog(apple)
@@ -87,11 +118,13 @@ Module = {
     recipes = {},
     craftingTime = 0,
     currentRecipe = nil,
-    baseCraftingTime = 100, -- default crafting time (modifiable)
+    baseCraftingTime = 100,
 }
 
 function Module:New(deviceId)
     local module = {}
+    GlobalModuleIterator = GlobalModuleIterator + 1
+    ExistingModules[GlobalModuleIterator] = module
     setmetatable(module, self)
     self.__index = self
     module.id = GlobalModuleIterator
@@ -102,22 +135,24 @@ function Module:New(deviceId)
     return module
 end
 
-function Module:AddInputBuffer(bufferSize, itemTypes, hitbox)
+function Module:AddInputBuffer(bufferSize, itemTypes, hitbox, relativePosition)
     local buffer = {
         maxSize = bufferSize,
         items = {},
         itemTypes = itemTypes or {}, -- allowable item types
         hitbox = hitbox,
-        inserterAttached = false
+        inserterAttached = false,
+        relativePosition = relativePosition or {x = 0, y = 0}
     }
     table.insert(self.inputBuffers, buffer)
 end
 
-function Module:AddOutputBuffer(bufferSize, itemType)
+function Module:AddOutputBuffer(bufferSize, itemType, relativePosition)
     local buffer = {
         maxSize = bufferSize,
         items = {},
-        itemType = itemType
+        itemType = itemType,
+        relativePosition = relativePosition or {x = 0, y = 0}
     }
     table.insert(self.outputBuffers, buffer)
 end
@@ -132,7 +167,8 @@ function Module:UpdateCrafting()
 
     -- Check if output buffers have space for the recipe outputs
     for output, quantity in pairs(self.currentRecipe.outputs) do
-        if #self:FindBuffer("output", output).items + quantity > self:FindBuffer("output", output).maxSize then
+        local outputBuffer = self:FindBuffer("output", output)
+        if #outputBuffer.items + quantity > outputBuffer.maxSize then
             return -- Halt crafting due to full output buffer
         end
     end
@@ -140,8 +176,8 @@ function Module:UpdateCrafting()
     -- Calculate crafting time reduction based on surplus items
     local surplusFactor = 1
     for input, required in pairs(self.currentRecipe.inputs) do
-        local buffer = self:FindBuffer("input", input)
-        local surplus = #buffer.items - required
+        local inputBuffer = self:FindBuffer("input", input)
+        local surplus = #inputBuffer.items - required
         if surplus > 0 then
             surplusFactor = surplusFactor + (surplus * 0.1) -- each extra item reduces time by 10%
         end
@@ -150,24 +186,24 @@ function Module:UpdateCrafting()
     self.craftingTime = self.baseCraftingTime / surplusFactor
     self.craftingTime = self.craftingTime - 1
     if self.craftingTime <= 0 then
-        self:CompleteCrafting()
-    end
-end
-
-function Module:CompleteCrafting()
-    for input, quantity in pairs(self.currentRecipe.inputs) do
-        for i = 1, quantity do
-            table.remove(self:FindBuffer("input", input).items, 1)
+        -- Move items from input buffers to output buffers
+        for input, required in pairs(self.currentRecipe.inputs) do
+            local inputBuffer = self:FindBuffer("input", input)
+            for i = 1, required do
+                table.remove(inputBuffer.items)
+            end
         end
-    end
 
-    for output, quantity in pairs(self.currentRecipe.outputs) do
-        for i = 1, quantity do
-            table.insert(self:FindBuffer("output", output).items, output)
+        for output, quantity in pairs(self.currentRecipe.outputs) do
+            local outputBuffer = self:FindBuffer("output", output)
+            for i = 1, quantity do
+                table.insert(outputBuffer.items, output)
+            end
         end
-    end
 
-    self.craftingTime = self.baseCraftingTime
+        -- Reset crafting time
+        self.craftingTime = self.baseCraftingTime
+    end
 end
 
 function Module:FindBuffer(bufferType, itemType)
@@ -197,38 +233,6 @@ function Module:GrabItemsAutomatically()
             end
         end
     end
-end
-
-
-
--- Define a Hitbox with Collision Checking
-Hitbox = {
-    maxX = 0,
-    maxY = 0,
-    minX = 0,
-    minY = 0
-}
-
-function Hitbox:New(pos, size)
-    local hb = {}
-    setmetatable(hb, self)
-    self.__index = self
-    hb.maxX = pos.x + size.x
-    hb.maxY = pos.y + size.y
-    hb.minX = pos.x - size.x
-    hb.minY = pos.y - size.y
-    return hb
-end
-
-function Hitbox:UpdatePosition(pos)
-    self.maxX = pos.x + self.size.x
-    self.maxY = pos.y + self.size.y
-    self.minX = pos.x - self.size.x
-    self.minY = pos.y - self.size.y
-end
-
-function Hitbox:CheckCollision(pos)
-    return pos.x < self.maxX and pos.x > self.minX and pos.y < self.maxY and pos.y > self.minY
 end
 
 ExistingInserters = {}
@@ -270,18 +274,24 @@ function Inserter:ConnectModules(input, output)
     if input.position then
         self.inputModule = input
         self.inputNode = nil
-        self.startPosition = input.position
+        local angle = GetDeviceAngle(input.deviceId)
+        self.startPosition = RotatePosition(input.relativePosition, angle)
+        self.startPosition.x = input.position.x + self.startPosition.x
+        self.startPosition.y = input.position.y + self.startPosition.y
     else
         self.inputNode = input
         self.inputModule = nil
         self.startPosition = input.position
-        self.inputHitbox = Hitbox:New(input.position, {x = 50, y = 50})
+        self.inputHitbox = Hitbox:New(input.position, {x = 1, y = 1}) -- Example size
     end
 
     if output.position then
         self.outputModule = output
         self.outputNode = nil
-        self.endPosition = output.position
+        local angle = GetDeviceAngle(output.deviceId)
+        self.endPosition = RotatePosition(output.relativePosition, angle)
+        self.endPosition.x = output.position.x + self.endPosition.x
+        self.endPosition.y = output.position.y + self.endPosition.y
     else
         self.outputNode = output
         self.outputModule = nil
@@ -331,4 +341,46 @@ function Inserter:Update()
             self.currentPosition = self.startPosition
         end
     end
+    --[[if self.inputNode then
+        local pos = NodePosition(self.inputNode)
+        if self.inputHitbox then
+            self.inputHitbox:UpdatePosition(pos)
+        end
+    end
+    if self.outputNode then
+        local pos = NodePosition(self.outputNode)
+        if self.outputHitbox then
+            self.outputHitbox:UpdatePosition(pos)
+        end
+    end]]
+end
+
+-- Define a Hitbox with Collision Checking
+Hitbox = {
+    maxX = 0,
+    maxY = 0,
+    minX = 0,
+    minY = 0
+}
+
+function Hitbox:New(pos, size)
+    local hb = {}
+    setmetatable(hb, self)
+    self.__index = self
+    hb.maxX = pos.x + size.x
+    hb.maxY = pos.y + size.y
+    hb.minX = pos.x - size.x
+    hb.minY = pos.y - size.y
+    return hb
+end
+
+function Hitbox:UpdatePosition(pos)
+    self.maxX = pos.x + self.size.x
+    self.maxY = pos.y + self.size.y
+    self.minX = pos.x - self.size.x
+    self.minY = pos.y - self.size.y
+end
+
+function Hitbox:CheckCollision(pos)
+    return pos.x < self.maxX and pos.x > self.minX and pos.y < self.maxY and pos.y > self.minY
 end
