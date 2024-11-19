@@ -4,12 +4,15 @@ ModuleCreationDefinitions = {
     ["pumpjack"] = {
     },
     ["mine"] = function (newModule)
-        newModule:AddOutputBuffer(2,"IronOre")
+        newModule:AddOutputBuffer(2,"IronOre",Vec3(-50,-50))
     end,
     ["mine2"] = {
     },
     ["furnace"] = function (newModule,deviceId)
-        Module:AddInputBuffer(6,"IronOre",Hitbox:New(GetDevicePosition(deviceId)+Vec3(1,0), Vec3(100, 100)))
+        basePos = GetDevicePosition(deviceId)
+        Module:AddInputBuffer(6,"IronOre",Hitbox:New(basePos+Vec3(1,0), Vec3(100, 100)))
+        Module:AddOutputBuffer(3,"IronPlate",Vec3())
+        Module:AddOutputBuffer(3,"",Vec3())
     end,
     ["steelfurnace"] = {
     },
@@ -160,8 +163,47 @@ end
 function Module:SetRecipe(recipe)
     self.currentRecipe = recipe
     self.baseCraftingTime = recipe.baseTime
-end
 
+    -- Configure input buffers based on the recipe
+    local i = 1
+    for inputItem, _ in pairs(recipe.inputs) do
+        local buffer = self.inputBuffers[i]
+        if buffer then
+            if type(inputItem) == "table" then
+                for key, inputItem in pairs() do
+                    buffer.itemTypes = {[inputItem] = true}
+                end
+            else
+                buffer.itemTypes = {[inputItem] = true}
+            end
+            buffer.items = {}
+            buffer.inserterAttached = false
+        else
+            Notice("Recipe has too many inputs for module")
+            self:AddInputBuffer(10, {[inputItem] = true}, nil, {x = 0, y = 0}) -- Example size and position
+        end
+        i = i + 1
+    end
+
+    -- Configure output buffers based on the recipe
+    local k = 1
+    for outputItem, _ in pairs(recipe.outputs) do
+        local buffer = self.outputBuffers[k]
+        if buffer then
+            buffer.itemType = outputItem
+            buffer.items = {}
+            buffer.inserterAttached = false
+        else
+            Notice("Recipe has too many outputs for module")
+            self:AddOutputBuffer(10, outputItem, {x = 0, y = 0}) -- Example size and position
+        end
+        k = k + 1
+    end
+
+end
+--[[
+Module input buffers must be able to contain multiple item types at once, make inserters check for each type that the connected module wants and the recipe to properly set the input buffers item types
+]]
 function Module:UpdateCrafting()
     if not self.currentRecipe then return end
 
@@ -282,7 +324,7 @@ function Inserter:ConnectModules(input, output)
         self.inputNode = input
         self.inputModule = nil
         self.startPosition = input.position
-        self.inputHitbox = Hitbox:New(input.position, {x = 1, y = 1}) -- Example size
+        self.inputHitbox = Hitbox:New(input.position, {x = 100, y = 100}) -- Example size
     end
 
     if output.position then
@@ -318,7 +360,7 @@ function Inserter:TransferItems(itemTypes)
             end
         end
     elseif self.outputNode then
-        -- Handle transfer to output node if needed
+        CreateItem(self.endPosition)
         BetterLog("Transferring items to output node")
     end
 end
