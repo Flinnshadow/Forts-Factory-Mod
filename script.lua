@@ -12,6 +12,7 @@ function Load()
 
     gravity = GetConstant("Physics.Gravity")
     --ScheduleCall(30,DestroyItemViaLifespan)
+
 end
 
 function Update()

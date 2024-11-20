@@ -1,43 +1,29 @@
+-- Constants and Globals
 gravity = 0
 GlobalItemIterator = 0
-PhysicsObjectLifeSpans = {}
+local CONVEYOR_SPEED = 120
+local MAX_PHYSICS_STEP = 8
 
-function OnKey(key, down)
-    if key == "u" and down then
-        CreateItem(ProcessedMousePos(),"apple")
-    end
-end
-
-function SpawnMetal(deviceId)
-    if DeviceExists(deviceId) then
-        --Find Output
-        pos = GetDevicePosition(deviceId) - Vec3(0, 130)
-        CreateItem(pos,"IronOre")
-        ScheduleCall(16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
-        -- if debug then BetterLog(GlobalItemIterator) end
-    end
-end
-
-function OnDeviceCompleted(teamId, deviceId, saveName)
-        SpawnMetal(deviceId)
-end
-
+-- Item Definitions
 ItemDefinitions = {
     [""] = {MaterialType = "Dynamo"},
     ["IronOre"] = {MaterialType = "DefaultMaterial",CoreValue = Value(50,0)},
     ["IronPlate"] = {MaterialType = "Bebop",CoreValue = Value(128,0)},
 }
 
+-- Global Storage
 PhysicsObjects = {}
+PhysicsObjectLifeSpans = {}
 
-function CreateItem(pos,iType,extras)
-
+-- Item Creation and Destruction
+function CreateItem(pos, iType, effectId)
     GlobalItemIterator = GlobalItemIterator + 1
-    --if not pos then return end
-    --extras == {velocity,inDevice,Direction}
     local iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
-    local id = SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
-    local Obj = { --TODO: move any static variables to a item definition (ie the core insertion value)
+
+    -- Use existing effect or create new one
+    local id = effectId or SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
+
+    local Obj = {
         itemType = iType,
         effectId = id,
         id = GlobalItemIterator,
@@ -50,28 +36,15 @@ function CreateItem(pos,iType,extras)
         staticFriction = 15,
     }
     PhysicsObjects[GlobalItemIterator] = Obj
-    ScheduleCall(30,DestroyItem,Obj,GlobalItemIterator)
-   -- table.insert(PhysicsObjectLifeSpans,-1,{Id = GlobalItemIterator,LifeSpan = 30}) --insert the PhysicsObjects sub table directly so I don't have to search for it when I want to remove it
-
+    ScheduleCall(30, DestroyItem, Obj, GlobalItemIterator)
+    return Obj
 end
 
-function DestroyItemViaLifespan()
-    --SC to the next lowest lifespan in the list, if everything has 30s lifespan then the list can just go linearly
-    --else ScheduleCall(30,DestroyItemViaLifespan)
-end
-
-function ContainItem(itemKey)
+function DestroyItem(item, itemKey, preserveEffect)
+    if not preserveEffect then
+        CancelEffect(item.effectId)
+    end
     PhysicsObjects[itemKey] = nil
-end
-
-function ReleaseItem(item,itemKey)
-    PhysicsObjects[itemKey] = item
-end
-
-function DestroyItem(item,itemKey)
-    CancelEffect(item.effectId)
-    PhysicsObjects[itemKey] = nil
-
 end
 
 local conveyorSpeed = 120
@@ -86,8 +59,7 @@ function UpdatePhysicsObjects()
         if GetDeviceType(deviceCheckSnapResult.DeviceId) == "reactor" then
             if ItemDefinitions[Object.itemType].CoreValue then
                 AddResourcesContinuous(GetDeviceTeamIdActual(deviceCheckSnapResult.DeviceId), ItemDefinitions[Object.itemType].CoreValue)
-                DestroyItem(Object,key)
-
+                DestroyItem(Object, key)
                 continue
             end
         end
@@ -112,22 +84,14 @@ function UpdatePhysicsObjects()
 
 
             local velocity = Object.velocity
-
-
-
             local snapResult = SnapToWorld(Object.position, Object.radius, SNAP_LINKS_FORE, -1, -1, "")
-
-
             local normal = snapResult.Normal
-
-
 
             local platformVelocity
             if snapResult.Type == SNAP_TYPE_LINK then
                 platformVelocity= Vec2Average({ NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB) })
             elseif snapResult.Type == SNAP_TYPE_NODE then
                 platformVelocity = NodeVelocity(snapResult.NodeIdA)
-
             elseif snapResult.Type == SNAP_TYPE_NOTHING then continue end
 
             local materialSaveName = GetLinkMaterialSaveName(snapResult.NodeIdA, snapResult.NodeIdB)
