@@ -1,2 +1,2 @@
 
-MetalProductionRate = 5 + 2
+MetalProductionRate = MetalProductionRate + 2

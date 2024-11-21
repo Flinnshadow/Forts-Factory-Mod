@@ -10,8 +10,14 @@ local DEFAULT_INSERTER_SPEED = 10
 local DEFAULT_ITEM_SPACING = 0.2
 
 ModuleCreationDefinitions = {
-    ["pumpjack"] = {
-    },
+    ["pumpjack"] = function (newModule)
+        newModule:AddOutputBuffer(2,"IronOre",Vec3(-50,-50))
+        newModule:SetRecipe({
+            baseTime = 10,
+            inputs = {},
+            outputs = {["Oil"] = 6}
+        })
+    end,
     ["mine"] = function (newModule)
         newModule:AddOutputBuffer(2,"IronOre",Vec3(-50,-50))
         newModule:SetRecipe({
@@ -34,12 +40,40 @@ ModuleCreationDefinitions = {
             consumption = Value(0,-10/25),
         })
     end,
-    ["steelfurnace"] = {
-    },
-    ["chemicalplant"] = {
-    },
-    ["constructor"] = {
-    },
+    ["steelfurnace"] = function (newModule, deviceId)
+        local basePos = GetDevicePosition(deviceId)
+        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
+        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
+        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
+        newModule:SetRecipe({
+            baseTime = 18,
+            inputs = {["IronOre"] = 2},
+            outputs = {["IronPlate"] = 1},
+            consumption = Value(0,-11/25),
+        })
+    end,
+    ["chemicalplant"] = function (newModule, deviceId)
+        local basePos = GetDevicePosition(deviceId)
+        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
+        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
+        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
+        newModule:SetRecipe({
+            baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
+            inputs = {["IronOre"] = 2},
+            outputs = {["IronPlate"] = 1},
+        })
+    end,
+    ["constructor"] = function (newModule, deviceId)
+        local basePos = GetDevicePosition(deviceId)
+        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
+        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
+        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
+        newModule:SetRecipe({
+            baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
+            inputs = {["IronOre"] = 2},
+            outputs = {["IronPlate"] = 1},
+        })
+    end,
     ["inserter"] = {
 
     },

@@ -7,8 +7,13 @@ local MAX_PHYSICS_STEP = 8
 -- Item Definitions
 ItemDefinitions = {
     [""] = {MaterialType = "Dynamo"},
-    ["IronOre"] = {MaterialType = "DefaultMaterial",CoreValue = Value(50,0)},
-    ["IronPlate"] = {MaterialType = "Bebop",CoreValue = Value(128,0)},
+    ["IronOre"] = {MaterialType = "DefaultMaterial",CoreValue = Value(50,0)}, --ivy
+    ["DirtyOre"] = {MaterialType = "Haze",CoreValue = Value(128,0)},
+    ["IronPlate"] = {MaterialType = "Abrams",CoreValue = Value(128,0)},
+    ["Steel"] = {MaterialType = "Bebop",CoreValue = Value(128,0)},
+    ["Oil"] = {MaterialType = "Viscous",CoreValue = Value(128,0)},
+    ["Ammo"] = {MaterialType = "meowginnis",CoreValue = Value(128,0)},
+    ["Ammo2"] = {MaterialType = "MoAndKrill",CoreValue = Value(128,0)},
 }
 
 -- Global Storage
