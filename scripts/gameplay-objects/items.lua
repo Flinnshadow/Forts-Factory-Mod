@@ -76,11 +76,8 @@ function UpdatePhysicsObjects()
         local physicsStep = math.clamp(math.ceil((velocity.length() * data.updateDelta) / (radius)), 1, maxPhysicsStep)
 
         local delta = data.updateDelta / physicsStep
-
-
         -- Physics steps
         for i = 1, physicsStep do
-
             -- Euler integration
             Object.position = Object.position + (delta * 0.5 * Object.velocity)
             Object.velocity.y = Object.velocity.y + gravity * delta
@@ -89,74 +86,77 @@ function UpdatePhysicsObjects()
 
 
             local velocity = Object.velocity
-            local snapResult = SnapToWorld(Object.position, Object.radius, SNAP_LINKS_FORE, -1, -1, "")
-            local normal = snapResult.Normal
-
-            local platformVelocity
-            if snapResult.Type == SNAP_TYPE_LINK then
-                platformVelocity= Vec2Average({ NodeVelocity(snapResult.NodeIdA), NodeVelocity(snapResult.NodeIdB) })
-            elseif snapResult.Type == SNAP_TYPE_NODE then
-                platformVelocity = NodeVelocity(snapResult.NodeIdA)
-            elseif snapResult.Type == SNAP_TYPE_NOTHING then continue end
-
-            local materialSaveName = GetLinkMaterialSaveName(snapResult.NodeIdA, snapResult.NodeIdB)
-
-
-            -- Perform collision in the frame of reference of the object that it is colliding with
-            velocity = velocity - platformVelocity
-            local parallel = Vec3(normal.y, -normal.x, 0)
-
-
-            if materialSaveName == "Conveyor" then
-                velocity = velocity + conveyorSpeed * parallel
-            end
-            if materialSaveName == "ConveyorInverted" then
-                velocity = velocity - conveyorSpeed * parallel
-            end
 
 
 
-            -- Helper vectors
-            local error = Object.position - snapResult.Position
-            local length = error.length()
-            if (length == 0) then
-                continue
-            end
-            local errorNormalized = Vec3(error.x / length, error.y / length, error.z / length)
-            error = (Object.radius - length) * errorNormalized
+            local snapResults = CircleCollisionOnStructure(Object.position, Object.radius)
+
+
+            for i = 1, #snapResults do
+                local snapResult = snapResults[i]
+                local materialSaveName = snapResult.material
+                if materialSaveName == "backbracing" then
+                    continue
+                end
+                local normal = snapResult.normal
+                local platformVelocity = Vec2Average({ NodeVelocity(snapResult.nodeA.id), NodeVelocity(snapResult.nodeB
+                .id) })
+                -- Perform collision in the frame of reference of the object that it is colliding with
+                velocity = velocity - platformVelocity
+                local parallel = Vec3(normal.y, -normal.x, 0)
+
+
+                if materialSaveName == "Conveyor" then
+                    velocity = velocity + conveyorSpeed * parallel
+                end
+                if materialSaveName == "ConveyorInverted" then
+                    velocity = velocity - conveyorSpeed * parallel
+                end
 
 
 
-            local velocityPerpToSurface = Vec2Dot(velocity, normal)
-            local velocityParallelToSurface = Vec2Dot(velocity, parallel)
+                -- Helper vectors
+                local error = Object.position - snapResult.pos
+                local length = error.length
+                if (length == 0) then
+                    continue
+                end
+                local errorNormalized = Vec3(error.x / length, error.y / length)
+                error = (Object.radius - length) * errorNormalized
 
 
-            -- Spring force
-            local force = Object.springConst * (physicsStep ^ 2) * error - (Object.dampening * velocityPerpToSurface * normal)
 
-            -- Dynamic friction
-            force = force - Object.friction * velocityParallelToSurface * parallel
-            velocity = velocity + delta * force
-
-            -- Return back to world frame
-            velocity = velocity + platformVelocity
-            if materialSaveName == "Conveyor" then
-                velocity = velocity - conveyorSpeed * parallel
-            end
-            if materialSaveName == "ConveyorInverted" then
-                velocity = velocity + conveyorSpeed * parallel
-            end
+                local velocityPerpToSurface = Vec2Dot(velocity, normal)
+                local velocityParallelToSurface = Vec2Dot(velocity, parallel)
 
 
-            -- Set velocity
-            Object.velocity = velocity
+                -- Spring force
+                local force = Object.springConst * (physicsStep ^ 2) * error -
+                (Object.dampening * velocityPerpToSurface * normal)
 
-            -- Static friction
-            if (math.abs(velocityParallelToSurface) < Object.staticFriction) then
-                Object.velocity = velocity - velocityParallelToSurface * parallel
+                -- Dynamic friction
+                force = force - Object.friction * velocityParallelToSurface * parallel
+                velocity = velocity + delta * force
+
+                -- Return back to world frame
+                velocity = velocity + platformVelocity
+                if materialSaveName == "Conveyor" then
+                    velocity = velocity - conveyorSpeed * parallel
+                end
+                if materialSaveName == "ConveyorInverted" then
+                    velocity = velocity + conveyorSpeed * parallel
+                end
+
+
+                -- Set velocity
+                Object.velocity = velocity
+
+                -- Static friction
+                if (math.abs(velocityParallelToSurface) < Object.staticFriction) then
+                    Object.velocity = velocity - velocityParallelToSurface * parallel
+                end
             end
         end
-
 
 
         SetEffectPosition(Object.effectId, Object.position)
