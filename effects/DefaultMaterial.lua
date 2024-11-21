@@ -12,7 +12,7 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/Ivy.png" },
+                    { texture = "devices/metalstore/metal.tga" },
                     
 
                     duration = 0.04,
@@ -32,7 +32,7 @@ Effects =
     {
         Type = "sprite",
         TimeToTrigger = 0,
-        LocalPosition = { x = 0, y = 0, z = -0.1 },
+        LocalPosition = { x = 0, y = 13, z = -0.1 },
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
