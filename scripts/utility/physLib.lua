@@ -9,8 +9,6 @@ dofile(path .. "/utility/BetterLog.lua")
 NodesRaw = {}
 Nodes = {}
 NodeTree = {}
-Links = {}
-LinksDiscard = {}
 --#endregion
 
 --#region Entrypoints
@@ -19,6 +17,8 @@ LinksDiscard = {}
 function LoadPhysLib()
     NodesRaw = {}
     Nodes = {}
+    NodeTree = {}
+
     EnumerateStructureLinks(0, -1, "c", true)
     EnumerateStructureLinks(1, -1, "c", true)
     EnumerateStructureLinks(2, -1, "c", true)
@@ -44,6 +44,14 @@ end
 --#endregion
 
 --#region Events
+
+function OnDeviceCreated(teamId, deviceId, saveName, nodeA, nodeB, t, upgradedId)
+    LoadPhysLib()
+end
+function OnGroundDeviceCreated(teamId, deviceId, saveName, pos, upgradedId)
+    LoadPhysLib()
+end
+
 function OnNodeCreated(nodeId, teamId, pos, foundation, selectable, extrusion)
 
     -- Just assign pos since we're using the x and y directly from that
@@ -53,6 +61,12 @@ function OnNodeCreated(nodeId, teamId, pos, foundation, selectable, extrusion)
     UpdateNodeTable()
 end
 function OnNodeDestroyed(nodeId, selectable)
+
+    local node = NodesRaw[nodeId]
+    local linkedToNodes = node.links
+    for otherLinkedNodeId, otherLink in pairs(linkedToNodes) do
+        otherLink.node.links[nodeId] = nil
+    end
     NodesRaw[nodeId] = nil
     UpdateNodeTable()
 
