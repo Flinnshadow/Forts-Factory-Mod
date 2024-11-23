@@ -73,7 +73,7 @@ function UpdatePhysicsObjects()
 
         local velocity = Object.velocity
         local radius = Object.radius
-        local physicsStep = math.clamp(math.ceil((velocity.length() * data.updateDelta) / (radius)), 1, maxPhysicsStep)
+        local physicsStep = math.clamp(math.ceil((Vec2Mag(velocity) * data.updateDelta) / (radius)), 1, maxPhysicsStep)
 
         local delta = data.updateDelta / physicsStep
         -- Physics steps

@@ -19,7 +19,7 @@ ModuleCreationDefinitions = {
         })
     end,
     ["mine"] = function (newModule)
-        newModule:AddOutputBuffer(2,"IronOre",Vec3(-50,-50))
+        newModule:AddOutputBuffer(2,"IronOre",Vec3(0,-50))
         newModule:SetRecipe({
             baseTime = 16,
             inputs = {},
@@ -30,9 +30,9 @@ ModuleCreationDefinitions = {
     },
     ["furnace"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
-        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
+        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(0, -1000), Vec3(150, 150)), {x = 0, y = -50})
+        newModule:AddOutputBuffer(2, "IronPlate", {x = -10, y = 0})
+        newModule:AddOutputBuffer(0, "", {x = 10, y = 0})
         newModule:SetRecipe({
             baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
             inputs = {["IronOre"] = 2},
@@ -146,50 +146,156 @@ function DestroyModule(deviceId)
         end
     end
 end
-
+--[[
 function UpdateModules()
+    -- Update Modules
     for _, module in pairs(ExistingModules) do
         module:GrabItemsAutomatically()
         module:UpdateCrafting()
-        if module.deviceId then
+
+        if module.deviceId and not module.isGroundDevice then
             local pos = GetDevicePosition(module.deviceId)
             local angle = GetDeviceAngle(module.deviceId)
-            for _, buffer in ipairs(module.inputBuffers) do
-                if buffer.hitbox then
-                    local bufferPos = RotatePosition(buffer.relativePosition, angle)
-                    bufferPos.x = pos.x + bufferPos.x
-                    bufferPos.y = pos.y + bufferPos.y
-                    buffer.hitbox:UpdatePosition(bufferPos)
+
+            -- Precompute cosine and sine of the angle
+            local cosAngle = math.cos(angle)
+            local sinAngle = math.sin(angle)
+
+            -- Helper function to update buffer positions
+            local function UpdateBufferPositions(buffers)
+                for _, buffer in ipairs(buffers) do
+                    if buffer.hitbox then
+                        -- Rotate the relative position using precomputed cosAngle and sinAngle
+                        local relPos = buffer.relativePosition
+                        local bufferPos = {
+                            x = relPos.x * cosAngle - relPos.y * sinAngle,
+                            y = relPos.x * sinAngle + relPos.y * cosAngle
+                        }
+                        bufferPos.x = pos.x + bufferPos.x
+                        bufferPos.y = pos.y + bufferPos.y
+                        buffer.hitbox:UpdatePosition(bufferPos)
+                    end
                 end
             end
-            for _, buffer in ipairs(module.outputBuffers) do
-                if buffer.hitbox then
-                    local bufferPos = RotatePosition(buffer.relativePosition, angle)
-                    bufferPos.x = pos.x + bufferPos.x
-                    bufferPos.y = pos.y + bufferPos.y
-                    buffer.hitbox:UpdatePosition(bufferPos)
+
+            -- Update input and output buffer positions
+            UpdateBufferPositions(module.inputBuffers)
+            UpdateBufferPositions(module.outputBuffers)
+        end
+        -- No need to update positions for ground devices
+    end
+
+    -- Update Inserters
+    for _, inserter in pairs(ExistingInserters) do
+        inserter:Update()
+        if inserter.inputNode and inserter.inputHitbox then
+            local pos = NodePosition(inserter.inputNode)
+            inserter.inputHitbox:UpdatePosition(pos)
+        end
+        if inserter.outputNode and inserter.outputHitbox then
+            local pos = NodePosition(inserter.outputNode)
+            inserter.outputHitbox:UpdatePosition(pos)
+        end
+    end
+end]]
+function UpdateModules()
+    -- Update Modules
+    for _, module in pairs(ExistingModules) do
+        module:GrabItemsAutomatically()
+        module:UpdateCrafting()
+
+        if module.deviceId then
+            -- Get device position
+            local pos = GetDevicePosition(module.deviceId)
+            -- Adjust the angle by adding π/2 radians (90 degrees) to orient upwards
+            local angle = GetDeviceAngle(module.deviceId) - 1.57079633
+
+            -- Helper function to update buffer positions
+            local function UpdateBufferPositions(buffers)
+                for _, buffer in ipairs(buffers) do
+                    -- Get relative position
+                    local relPos = buffer.relativePosition
+
+                    -- Rotate the relative position using the helper function
+                    local rotated = RotatePoint(relPos.x, relPos.y, -angle)
+
+                    local bufferPos = {
+                        x = pos.x + rotated.x,
+                        y = pos.y + rotated.y,
+                        z = -101
+                    }
+
+                    -- Update hitbox position if it exists
+                    if buffer.hitbox then
+                        buffer.hitbox:UpdatePosition(bufferPos)
+                    end
+
+                    -- Debugging visuals for buffer center
+                    if debugMode then
+                        -- Draw a magenta circle at the center position of the buffer
+                        SpawnCircle(bufferPos, 5, Colour(255, 0, 255, 255), 0.1)
+                    end
+
+                    -- Debugging visuals for hitboxes
+                    if debugMode and buffer.hitbox then
+                        -- Calculate the half size
+                        local halfSizeX = buffer.hitbox.size.x
+                        local halfSizeY = buffer.hitbox.size.y
+
+                        -- Define the corners relative to the buffer position
+                        local corners = {
+                            { x = -halfSizeX, y = -halfSizeY },
+                            { x =  halfSizeX, y = -halfSizeY },
+                            { x =  halfSizeX, y =  halfSizeY },
+                            { x = -halfSizeX, y =  halfSizeY },
+                        }
+
+                        -- Rotate and translate corners using the helper function
+                        local rotatedCorners = {}
+                        for i, corner in ipairs(corners) do
+                            local rotatedCorner = RotatePoint(corner.x, corner.y, -angle)
+                            table.insert(rotatedCorners, {
+                                x = bufferPos.x + rotatedCorner.x,
+                                y = bufferPos.y + rotatedCorner.y,
+                                z = -101
+                            })
+                        end
+
+                        -- Draw lines between the corners to form a green box
+                        for i = 1, 4 do
+                            local startCorner = rotatedCorners[i]
+                            local endCorner = rotatedCorners[(i % 4) + 1]
+                            SpawnLine(startCorner, endCorner, Colour(0, 255, 0, 255), 0.1)
+                        end
+                    end
                 end
+            end
+
+            -- Update input and output buffer positions
+            UpdateBufferPositions(module.inputBuffers)
+            UpdateBufferPositions(module.outputBuffers)
+
+            -- Debugging visuals for module position
+            if debugMode then
+                -- Draw a blue circle at the module's position
+                SpawnCircle(pos, 15, Colour(0, 0, 255, 255), 0.1)
             end
         end
     end
 
+    -- Update Inserters
     for _, inserter in pairs(ExistingInserters) do
         inserter:Update()
-        if inserter.inputNode then
-            local pos = NodePosition(inserter.inputNode)
-            if inserter.inputHitbox then
-                inserter.inputHitbox:UpdatePosition(pos)
-            end
-        end
-        if inserter.outputNode then
-            local pos = NodePosition(inserter.outputNode)
-            if inserter.outputHitbox then
-                inserter.outputHitbox:UpdatePosition(pos)
-            end
+
+        -- Inserter debugging visuals if needed
+        if debugMode then
+            -- Draw a red line from start to end position
+            SpawnLine(inserter.startPosition, inserter.endPosition, Colour(255, 0, 0, 255), 0.1)
+            -- Draw a yellow circle at the inserter's current position
+            SpawnCircle(inserter.currentPosition, 5, Colour(255, 255, 0, 255), 0.1)
         end
     end
 end
-
 -- Module Class Definition
 Module = {
     id = 0,
@@ -201,6 +307,7 @@ Module = {
     craftingTime = 0,
     currentRecipe = nil,
     baseCraftingTime = DEFAULT_CRAFTING_TIME,
+    isGroundDevice = false,
 }
 
 -- Module Core Functions
@@ -213,6 +320,7 @@ function Module:New(deviceId)
     module.id = GlobalModuleIterator
     module.deviceId = deviceId
     module.teamId = GetDeviceTeamIdActual(deviceId)
+    module.isGroundDevice = IsGroundDevice(deviceId)
     module.inputBuffers = {}
     module.outputBuffers = {}
     module.connectedInserters = {}
@@ -585,18 +693,16 @@ Hitbox = {
     maxX = 0,
     maxY = 0,
     minX = 0,
-    minY = 0
+    minY = 0,
+    size = { x = 0, y = 0 }
 }
 
 function Hitbox:New(pos, size)
     local hb = {}
     setmetatable(hb, self)
     self.__index = self
-    hb.maxX = pos.x + size.x
-    hb.maxY = pos.y + size.y
-    hb.minX = pos.x - size.x
-    hb.minY = pos.y - size.y
-    hb.size = size
+    hb.size = { x = size.x / 2, y = size.y / 2 } -- Store half size
+    hb:UpdatePosition(pos)
     return hb
 end
 
@@ -618,6 +724,15 @@ function RotatePosition(position, angle)
         x = position.x * cosAngle - position.y * sinAngle,
         y = position.x * sinAngle + position.y * cosAngle,
         z = 0
+    }
+end
+-- Helper function to rotate a point (x, y) by a given angle (in radians)
+function RotatePoint(x, y, angle)
+    local cosAngle = math.cos(angle)
+    local sinAngle = math.sin(angle)
+    return {
+        x = x * cosAngle - y * sinAngle,
+        y = x * sinAngle + y * cosAngle
     }
 end
 
