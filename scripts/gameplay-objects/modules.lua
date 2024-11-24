@@ -4,14 +4,14 @@ ExistingModules = {}
 ExistingInserters = {}
 
 -- Constants
-local DEFAULT_BUFFER_SIZE = 10
-local DEFAULT_CRAFTING_TIME = 100
+local DEFAULT_BUFFER_SIZE = 2
+local DEFAULT_CRAFTING_TIME = 250 --10s
 local DEFAULT_INSERTER_SPEED = 10
 local DEFAULT_ITEM_SPACING = 0.2
 
 ModuleCreationDefinitions = {
-    ["pumpjack"] = function (newModule)
-        newModule:AddOutputBuffer(2,"IronOre",Vec3(-50,-50))
+    ["derrick"] = function (newModule)
+        newModule:AddOutputBuffer(20,"IronOre",Vec3(-40,-250))
         newModule:SetRecipe({
             baseTime = 10,
             inputs = {},
@@ -19,7 +19,7 @@ ModuleCreationDefinitions = {
         })
     end,
     ["mine"] = function (newModule)
-        newModule:AddOutputBuffer(2,"IronOre",Vec3(0,-50))
+        newModule:AddOutputBuffer(2,"IronOre",Vec3(-25,-110))
         newModule:SetRecipe({
             baseTime = 16,
             inputs = {},
@@ -27,12 +27,20 @@ ModuleCreationDefinitions = {
         })
     end,
     ["mine2"] = {
+        function (newModule)
+            newModule:AddOutputBuffer(2,"IronOre",Vec3(-25,-110))
+            newModule:SetRecipe({
+                baseTime = 11, --12 == ~1.333x
+                inputs = {},
+                outputs = {["IronOre"] = 1}
+            })
+        end,
     },
     ["furnace"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(0, -1000), Vec3(150, 150)), {x = 0, y = -50})
-        newModule:AddOutputBuffer(2, "IronPlate", {x = -10, y = 0})
-        newModule:AddOutputBuffer(0, "", {x = 10, y = 0})
+        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(0, -1000), Vec3(100, 100)), {x = 0, y = -70})
+        newModule:AddOutputBuffer(2, "IronPlate", {x = -30, y = 20})
+        newModule:AddOutputBuffer(0, "", {x = 30, y = 20})
         newModule:SetRecipe({
             baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
             inputs = {["IronOre"] = 2},
@@ -42,25 +50,25 @@ ModuleCreationDefinitions = {
     end,
     ["steelfurnace"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
-        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
+        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = -70})
+        newModule:AddOutputBuffer(2, "IronPlate", {x = -30, y = 20})
+        newModule:AddOutputBuffer(0, "", {x = 30, y = 20})
         newModule:SetRecipe({
             baseTime = 18,
             inputs = {["IronOre"] = 2},
             outputs = {["IronPlate"] = 1},
-            consumption = Value(0,-11/25),
+            consumption = Value(0,-12/25),
         })
     end,
     ["chemicalplant"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
+        newModule:AddInputBuffer(4, {["IronPlate"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
+        newModule:AddOutputBuffer(2, "SulfuricAcid", {x = 0, y = 0})
         newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
         newModule:SetRecipe({
-            baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
-            inputs = {["IronOre"] = 2},
-            outputs = {["IronPlate"] = 1},
+            baseTime = 15,
+            inputs = {["IronPlate"] = 1},
+            outputs = {["SulfuricAcid"] = 10},
         })
     end,
     ["constructor"] = function (newModule, deviceId)
@@ -69,15 +77,25 @@ ModuleCreationDefinitions = {
         newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
         newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
         newModule:SetRecipe({
-            baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
-            inputs = {["IronOre"] = 2},
-            outputs = {["IronPlate"] = 1},
+            baseTime = 20,
+            inputs = {["IronPlate"] = 1},
+            outputs = {["Ammo"] = 2},
         })
     end,
     ["inserter"] = {
 
     },
 }
+
+--[[{
+    baseTime = 35,
+    inputs = {["IronPlate"] = 3}, 
+    outputs = {["Steel"] = 2,["Slag"] = 1},
+    consumption = Value(0,-15/25),
+}
+-- advanced = {input = SulfuricAcid, 
+--baseTime = 22 iron, baseTime2 = 30 = dirtyIron, baseTime3 = 40, slag}
+]]
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
     if ModuleCreationDefinitions[saveName] then
@@ -86,6 +104,11 @@ function OnDeviceCompleted(teamId, deviceId, saveName)
 end
 
 function OnDeviceDestroyed(teamId, deviceId, saveName)
+    Log("saveName")
+    DestroyModule(deviceId)
+end
+function OnDeviceDeleted(teamId, deviceId, saveName, nodeA, nodeB, t)
+    Log("saveName")
     DestroyModule(deviceId)
 end
 
@@ -93,14 +116,13 @@ function CreateModule(deviceName,deviceId) --Externally referred to as a device,
     local newModule = Module:New(deviceId)
     ModuleCreationDefinitions[deviceName](newModule,deviceId)
     table.insert(ExistingModules, newModule)
-    BetterLog(newModule)
 end
 
 function DestroyModule(deviceId)
     for i, module in ipairs(ExistingModules) do
         if module.deviceId == deviceId then
             local pos = GetDevicePosition(deviceId)
-            local angle = GetDeviceAngle(deviceId)
+            local angle = GetDeviceAngle(deviceId) - 1.57079633
 
             -- Handle input buffers
             for _, buffer in ipairs(module.inputBuffers) do
@@ -316,7 +338,7 @@ function Module:New(deviceId)
     GlobalModuleIterator = GlobalModuleIterator + 1
     setmetatable(module, self)
     self.__index = self
-    
+
     module.id = GlobalModuleIterator
     module.deviceId = deviceId
     module.teamId = GetDeviceTeamIdActual(deviceId)
@@ -324,7 +346,7 @@ function Module:New(deviceId)
     module.inputBuffers = {}
     module.outputBuffers = {}
     module.connectedInserters = {}
-    
+
     return module
 end
 
@@ -354,7 +376,7 @@ end
 function Module:SetRecipe(recipe)
     self.currentRecipe = recipe
     self.baseCraftingTime = recipe.baseTime*25
-    self.craftingTime = recipe.baseTime
+    self.craftingTime = self.baseCraftingTime
 
     -- Configure input buffers
     local i = 1
@@ -444,7 +466,7 @@ function Module:UpdateCrafting()
                 else
                     -- Calculate spawn position based on buffer's relative position and module rotation
                     local pos = GetDevicePosition(self.deviceId)
-                    local angle = GetDeviceAngle(self.deviceId)
+                    local angle = GetDeviceAngle(self.deviceId) - 1.57079633
                     local spawnPos = RotatePosition(outputBuffer.relativePosition, angle)
                     spawnPos.x = pos.x + spawnPos.x
                     spawnPos.y = pos.y + spawnPos.y
@@ -577,7 +599,7 @@ function Inserter:ConnectModules(input, output)
     if input.position then
         self.inputModule = input
         self.inputNode = nil
-        local angle = GetDeviceAngle(input.deviceId)
+        local angle = GetDeviceAngle(input.deviceId) - 1.57079633
         self.startPosition = RotatePosition(input.relativePosition, angle)
         self.startPosition.x = input.position.x + self.startPosition.x
         self.startPosition.y = input.position.y + self.startPosition.y
@@ -592,7 +614,7 @@ function Inserter:ConnectModules(input, output)
     if output.position then
         self.outputModule = output
         self.outputNode = nil
-        local angle = GetDeviceAngle(output.deviceId)
+        local angle = GetDeviceAngle(output.deviceId) - 1.57079633
         self.endPosition = RotatePosition(output.relativePosition, angle)
         self.endPosition.x = output.position.x + self.endPosition.x
         self.endPosition.y = output.position.y + self.endPosition.y
@@ -744,6 +766,12 @@ function OnKey(key, down)
         CreateItem(ProcessedMousePos(),"apple")
     end
     if key == "o" and down then
+        if debugMode then
+            for key, value in pairs(ExistingModules) do
+                value.craftingTime = 0
+                value.baseCraftingTime = 0.5
+            end
+        end
         BetterLog(ExistingModules)
     end
 end

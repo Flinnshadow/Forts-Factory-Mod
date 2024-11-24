@@ -12,12 +12,6 @@ debugMode = true
 function Load()
     LoadPhysLib()
     gravity = GetConstant("Physics.Gravity")
-    --ScheduleCall(30,DestroyItemViaLifespan)
-    if debugMode then
-        for key, value in pairs(ExistingModules) do
-            value.recipe.baseTime = 0.5
-        end
-    end
 end
 
 function Update()

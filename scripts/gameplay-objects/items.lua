@@ -11,7 +11,8 @@ ItemDefinitions = {
     ["DirtyOre"] = {MaterialType = "Haze",CoreValue = Value(128,0)},
     ["IronPlate"] = {MaterialType = "Abrams",CoreValue = Value(128,0)},
     ["Steel"] = {MaterialType = "Bebop",CoreValue = Value(128,0)},
-    ["Oil"] = {MaterialType = "Viscous",CoreValue = Value(128,0)},
+    ["Oil"] = {MaterialType = "Viscous",CoreValue = Value(0,100)},
+    ["SulfuricAcid"] = {MaterialType = "Viscous",CoreValue = Value(0,100)},
     ["Ammo"] = {MaterialType = "meowginnis",CoreValue = Value(128,0)},
     ["Ammo2"] = {MaterialType = "MoAndKrill",CoreValue = Value(128,0)},
 }
