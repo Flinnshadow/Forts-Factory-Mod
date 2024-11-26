@@ -35,8 +35,8 @@ function CreateItem(pos, iType, effectId)
         position = pos,
         velocity = Vec3(0, 0, 0),
         radius = 50 / 2,
-        springConst = 800,
-        dampening = 30,
+        springConst = 400,
+        dampening = 20,
         friction = 15,
         staticFriction = 15,
     }
@@ -73,7 +73,7 @@ function UpdatePhysicsObjects()
 
         local velocity = Object.velocity
         local radius = Object.radius
-        local physicsStep = math.clamp(math.ceil((velocity.length() * data.updateDelta) / (radius)), 1, maxPhysicsStep)
+        local physicsStep = math.clamp(math.ceil((Vec2Mag(velocity) * data.updateDelta) / (radius)), 1, maxPhysicsStep)
 
         local delta = data.updateDelta / physicsStep
         -- Physics steps
@@ -92,13 +92,32 @@ function UpdatePhysicsObjects()
             local snapResults = CircleCollisionOnStructure(Object.position, Object.radius)
 
 
+            local noBackgroundResults = {}
             for i = 1, #snapResults do
                 local snapResult = snapResults[i]
-                local materialSaveName = snapResult.material
-                if materialSaveName == "backbracing" then
+                if snapResult.material == "backbracing" then
                     continue
                 end
-                local normal = snapResult.normal
+                noBackgroundResults[#noBackgroundResults + 1] = snapResult
+            end
+            local filteredResults = {}
+            for j = 1, #noBackgroundResults do
+                local snapResult = noBackgroundResults[j]
+                if snapResult.type == 1 then
+                    filteredResults[#filteredResults + 1] = snapResult
+                end
+                snapResult.conveyorType = 0
+                if snapResult.material == "Conveyor" then snapResult.conveyorType = 1
+                elseif snapResult.material == "ConveyorInverted" then snapResult.conveyorType = 2 end
+            end
+            if #filteredResults == 0 then
+                filteredResults = noBackgroundResults
+            end
+
+            for i = 1, #filteredResults do
+                local snapResult = filteredResults[i]
+                local materialSaveName = snapResult.material
+                local normal = Vec3(snapResult.normal.x, snapResult.normal.y, 0)
                 local platformVelocity = Vec2Average({ NodeVelocity(snapResult.nodeA.id), NodeVelocity(snapResult.nodeB
                 .id) })
                 -- Perform collision in the frame of reference of the object that it is colliding with
@@ -106,17 +125,15 @@ function UpdatePhysicsObjects()
                 local parallel = Vec3(normal.y, -normal.x, 0)
 
 
-                if materialSaveName == "Conveyor" then
+                if snapResult.conveyorType == 1 then
                     velocity = velocity + conveyorSpeed * parallel
-                end
-                if materialSaveName == "ConveyorInverted" then
+                elseif snapResult.conveyorType == 2 then
                     velocity = velocity - conveyorSpeed * parallel
                 end
 
-
-
                 -- Helper vectors
-                local error = Object.position - snapResult.pos
+                local objPos = Object.position
+                local error = Vec3(objPos.x - snapResult.pos.x, objPos.y - snapResult.pos.y)
                 local length = error.length
                 if (length == 0) then
                     continue
@@ -124,29 +141,24 @@ function UpdatePhysicsObjects()
                 local errorNormalized = Vec3(error.x / length, error.y / length)
                 error = (Object.radius - length) * errorNormalized
 
-
+                
 
                 local velocityPerpToSurface = Vec2Dot(velocity, normal)
                 local velocityParallelToSurface = Vec2Dot(velocity, parallel)
 
-
                 -- Spring force
                 local force = Object.springConst * (physicsStep ^ 2) * error -
                 (Object.dampening * velocityPerpToSurface * normal)
-
                 -- Dynamic friction
                 force = force - Object.friction * velocityParallelToSurface * parallel
                 velocity = velocity + delta * force
-
                 -- Return back to world frame
                 velocity = velocity + platformVelocity
-                if materialSaveName == "Conveyor" then
+                if snapResult.conveyorType == 1 then
                     velocity = velocity - conveyorSpeed * parallel
-                end
-                if materialSaveName == "ConveyorInverted" then
+                elseif snapResult.conveyorType == 2 then
                     velocity = velocity + conveyorSpeed * parallel
                 end
-
 
                 -- Set velocity
                 Object.velocity = velocity
