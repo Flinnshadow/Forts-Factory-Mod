@@ -6,14 +6,12 @@ dofile(path .. "/scripts/math/vector.lua")
 dofile(path .. "/scripts/gameplay-objects/items.lua")
 dofile(path .. "/scripts/gameplay-objects/modules.lua")
 dofile(path .. "/scripts/utility/physLib.lua")
-
+debugMode = true
 
 
 function Load()
     LoadPhysLib()
     gravity = GetConstant("Physics.Gravity")
-    --ScheduleCall(30,DestroyItemViaLifespan)
-
 end
 
 function Update()

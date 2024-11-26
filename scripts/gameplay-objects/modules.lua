@@ -4,14 +4,14 @@ ExistingModules = {}
 ExistingInserters = {}
 
 -- Constants
-local DEFAULT_BUFFER_SIZE = 10
-local DEFAULT_CRAFTING_TIME = 100
+local DEFAULT_BUFFER_SIZE = 2
+local DEFAULT_CRAFTING_TIME = 250 --10s
 local DEFAULT_INSERTER_SPEED = 10
 local DEFAULT_ITEM_SPACING = 0.2
 
 ModuleCreationDefinitions = {
-    ["pumpjack"] = function (newModule)
-        newModule:AddOutputBuffer(2,"IronOre",Vec3(-50,-50))
+    ["derrick"] = function (newModule)
+        newModule:AddOutputBuffer(20,"IronOre",Vec3(-40,-250))
         newModule:SetRecipe({
             baseTime = 10,
             inputs = {},
@@ -19,7 +19,7 @@ ModuleCreationDefinitions = {
         })
     end,
     ["mine"] = function (newModule)
-        newModule:AddOutputBuffer(2,"IronOre",Vec3(-50,-50))
+        newModule:AddOutputBuffer(2,"IronOre",Vec3(-25,-110))
         newModule:SetRecipe({
             baseTime = 16,
             inputs = {},
@@ -27,12 +27,20 @@ ModuleCreationDefinitions = {
         })
     end,
     ["mine2"] = {
+        function (newModule)
+            newModule:AddOutputBuffer(2,"IronOre",Vec3(-25,-110))
+            newModule:SetRecipe({
+                baseTime = 11, --12 == ~1.333x
+                inputs = {},
+                outputs = {["IronOre"] = 1}
+            })
+        end,
     },
     ["furnace"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
-        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
+        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(0, -1000), Vec3(100, 100)), {x = 0, y = -70})
+        newModule:AddOutputBuffer(2, "IronPlate", {x = -30, y = 20})
+        newModule:AddOutputBuffer(0, "", {x = 30, y = 20})
         newModule:SetRecipe({
             baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
             inputs = {["IronOre"] = 2},
@@ -42,25 +50,25 @@ ModuleCreationDefinitions = {
     end,
     ["steelfurnace"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
-        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
+        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = -70})
+        newModule:AddOutputBuffer(2, "IronPlate", {x = -30, y = 20})
+        newModule:AddOutputBuffer(0, "", {x = 30, y = 20})
         newModule:SetRecipe({
             baseTime = 18,
             inputs = {["IronOre"] = 2},
             outputs = {["IronPlate"] = 1},
-            consumption = Value(0,-11/25),
+            consumption = Value(0,-12/25),
         })
     end,
     ["chemicalplant"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
+        newModule:AddInputBuffer(4, {["IronPlate"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
+        newModule:AddOutputBuffer(2, "SulfuricAcid", {x = 0, y = 0})
         newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
         newModule:SetRecipe({
-            baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
-            inputs = {["IronOre"] = 2},
-            outputs = {["IronPlate"] = 1},
+            baseTime = 15,
+            inputs = {["IronPlate"] = 1},
+            outputs = {["SulfuricAcid"] = 10},
         })
     end,
     ["constructor"] = function (newModule, deviceId)
@@ -69,15 +77,25 @@ ModuleCreationDefinitions = {
         newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
         newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
         newModule:SetRecipe({
-            baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
-            inputs = {["IronOre"] = 2},
-            outputs = {["IronPlate"] = 1},
+            baseTime = 20,
+            inputs = {["IronPlate"] = 1},
+            outputs = {["Ammo"] = 2},
         })
     end,
     ["inserter"] = {
 
     },
 }
+
+--[[{
+    baseTime = 35,
+    inputs = {["IronPlate"] = 3}, 
+    outputs = {["Steel"] = 2,["Slag"] = 1},
+    consumption = Value(0,-15/25),
+}
+-- advanced = {input = SulfuricAcid, 
+--baseTime = 22 iron, baseTime2 = 30 = dirtyIron, baseTime3 = 40, slag}
+]]
 
 function OnDeviceCompleted(teamId, deviceId, saveName)
     if ModuleCreationDefinitions[saveName] then
@@ -86,6 +104,11 @@ function OnDeviceCompleted(teamId, deviceId, saveName)
 end
 
 function OnDeviceDestroyed(teamId, deviceId, saveName)
+    Log("saveName")
+    DestroyModule(deviceId)
+end
+function OnDeviceDeleted(teamId, deviceId, saveName, nodeA, nodeB, t)
+    Log("saveName")
     DestroyModule(deviceId)
 end
 
@@ -93,14 +116,13 @@ function CreateModule(deviceName,deviceId) --Externally referred to as a device,
     local newModule = Module:New(deviceId)
     ModuleCreationDefinitions[deviceName](newModule,deviceId)
     table.insert(ExistingModules, newModule)
-    BetterLog(newModule)
 end
 
 function DestroyModule(deviceId)
     for i, module in ipairs(ExistingModules) do
         if module.deviceId == deviceId then
             local pos = GetDevicePosition(deviceId)
-            local angle = GetDeviceAngle(deviceId)
+            local angle = GetDeviceAngle(deviceId) - 1.57079633
 
             -- Handle input buffers
             for _, buffer in ipairs(module.inputBuffers) do
@@ -146,50 +168,156 @@ function DestroyModule(deviceId)
         end
     end
 end
-
+--[[
 function UpdateModules()
+    -- Update Modules
     for _, module in pairs(ExistingModules) do
         module:GrabItemsAutomatically()
         module:UpdateCrafting()
-        if module.deviceId then
+
+        if module.deviceId and not module.isGroundDevice then
             local pos = GetDevicePosition(module.deviceId)
             local angle = GetDeviceAngle(module.deviceId)
-            for _, buffer in ipairs(module.inputBuffers) do
-                if buffer.hitbox then
-                    local bufferPos = RotatePosition(buffer.relativePosition, angle)
-                    bufferPos.x = pos.x + bufferPos.x
-                    bufferPos.y = pos.y + bufferPos.y
-                    buffer.hitbox:UpdatePosition(bufferPos)
+
+            -- Precompute cosine and sine of the angle
+            local cosAngle = math.cos(angle)
+            local sinAngle = math.sin(angle)
+
+            -- Helper function to update buffer positions
+            local function UpdateBufferPositions(buffers)
+                for _, buffer in ipairs(buffers) do
+                    if buffer.hitbox then
+                        -- Rotate the relative position using precomputed cosAngle and sinAngle
+                        local relPos = buffer.relativePosition
+                        local bufferPos = {
+                            x = relPos.x * cosAngle - relPos.y * sinAngle,
+                            y = relPos.x * sinAngle + relPos.y * cosAngle
+                        }
+                        bufferPos.x = pos.x + bufferPos.x
+                        bufferPos.y = pos.y + bufferPos.y
+                        buffer.hitbox:UpdatePosition(bufferPos)
+                    end
                 end
             end
-            for _, buffer in ipairs(module.outputBuffers) do
-                if buffer.hitbox then
-                    local bufferPos = RotatePosition(buffer.relativePosition, angle)
-                    bufferPos.x = pos.x + bufferPos.x
-                    bufferPos.y = pos.y + bufferPos.y
-                    buffer.hitbox:UpdatePosition(bufferPos)
+
+            -- Update input and output buffer positions
+            UpdateBufferPositions(module.inputBuffers)
+            UpdateBufferPositions(module.outputBuffers)
+        end
+        -- No need to update positions for ground devices
+    end
+
+    -- Update Inserters
+    for _, inserter in pairs(ExistingInserters) do
+        inserter:Update()
+        if inserter.inputNode and inserter.inputHitbox then
+            local pos = NodePosition(inserter.inputNode)
+            inserter.inputHitbox:UpdatePosition(pos)
+        end
+        if inserter.outputNode and inserter.outputHitbox then
+            local pos = NodePosition(inserter.outputNode)
+            inserter.outputHitbox:UpdatePosition(pos)
+        end
+    end
+end]]
+function UpdateModules()
+    -- Update Modules
+    for _, module in pairs(ExistingModules) do
+        module:GrabItemsAutomatically()
+        module:UpdateCrafting()
+
+        if module.deviceId then
+            -- Get device position
+            local pos = GetDevicePosition(module.deviceId)
+            -- Adjust the angle by adding π/2 radians (90 degrees) to orient upwards
+            local angle = GetDeviceAngle(module.deviceId) - 1.57079633
+
+            -- Helper function to update buffer positions
+            local function UpdateBufferPositions(buffers)
+                for _, buffer in ipairs(buffers) do
+                    -- Get relative position
+                    local relPos = buffer.relativePosition
+
+                    -- Rotate the relative position using the helper function
+                    local rotated = RotatePoint(relPos.x, relPos.y, -angle)
+
+                    local bufferPos = {
+                        x = pos.x + rotated.x,
+                        y = pos.y + rotated.y,
+                        z = -101
+                    }
+
+                    -- Update hitbox position if it exists
+                    if buffer.hitbox then
+                        buffer.hitbox:UpdatePosition(bufferPos)
+                    end
+
+                    -- Debugging visuals for buffer center
+                    if debugMode then
+                        -- Draw a magenta circle at the center position of the buffer
+                        SpawnCircle(bufferPos, 5, Colour(255, 0, 255, 255), 0.1)
+                    end
+
+                    -- Debugging visuals for hitboxes
+                    if debugMode and buffer.hitbox then
+                        -- Calculate the half size
+                        local halfSizeX = buffer.hitbox.size.x
+                        local halfSizeY = buffer.hitbox.size.y
+
+                        -- Define the corners relative to the buffer position
+                        local corners = {
+                            { x = -halfSizeX, y = -halfSizeY },
+                            { x =  halfSizeX, y = -halfSizeY },
+                            { x =  halfSizeX, y =  halfSizeY },
+                            { x = -halfSizeX, y =  halfSizeY },
+                        }
+
+                        -- Rotate and translate corners using the helper function
+                        local rotatedCorners = {}
+                        for i, corner in ipairs(corners) do
+                            local rotatedCorner = RotatePoint(corner.x, corner.y, -angle)
+                            table.insert(rotatedCorners, {
+                                x = bufferPos.x + rotatedCorner.x,
+                                y = bufferPos.y + rotatedCorner.y,
+                                z = -101
+                            })
+                        end
+
+                        -- Draw lines between the corners to form a green box
+                        for i = 1, 4 do
+                            local startCorner = rotatedCorners[i]
+                            local endCorner = rotatedCorners[(i % 4) + 1]
+                            SpawnLine(startCorner, endCorner, Colour(0, 255, 0, 255), 0.1)
+                        end
+                    end
                 end
+            end
+
+            -- Update input and output buffer positions
+            UpdateBufferPositions(module.inputBuffers)
+            UpdateBufferPositions(module.outputBuffers)
+
+            -- Debugging visuals for module position
+            if debugMode then
+                -- Draw a blue circle at the module's position
+                SpawnCircle(pos, 15, Colour(0, 0, 255, 255), 0.1)
             end
         end
     end
 
+    -- Update Inserters
     for _, inserter in pairs(ExistingInserters) do
         inserter:Update()
-        if inserter.inputNode then
-            local pos = NodePosition(inserter.inputNode)
-            if inserter.inputHitbox then
-                inserter.inputHitbox:UpdatePosition(pos)
-            end
-        end
-        if inserter.outputNode then
-            local pos = NodePosition(inserter.outputNode)
-            if inserter.outputHitbox then
-                inserter.outputHitbox:UpdatePosition(pos)
-            end
+
+        -- Inserter debugging visuals if needed
+        if debugMode then
+            -- Draw a red line from start to end position
+            SpawnLine(inserter.startPosition, inserter.endPosition, Colour(255, 0, 0, 255), 0.1)
+            -- Draw a yellow circle at the inserter's current position
+            SpawnCircle(inserter.currentPosition, 5, Colour(255, 255, 0, 255), 0.1)
         end
     end
 end
-
 -- Module Class Definition
 Module = {
     id = 0,
@@ -201,6 +329,7 @@ Module = {
     craftingTime = 0,
     currentRecipe = nil,
     baseCraftingTime = DEFAULT_CRAFTING_TIME,
+    isGroundDevice = false,
 }
 
 -- Module Core Functions
@@ -209,14 +338,15 @@ function Module:New(deviceId)
     GlobalModuleIterator = GlobalModuleIterator + 1
     setmetatable(module, self)
     self.__index = self
-    
+
     module.id = GlobalModuleIterator
     module.deviceId = deviceId
     module.teamId = GetDeviceTeamIdActual(deviceId)
+    module.isGroundDevice = IsGroundDevice(deviceId)
     module.inputBuffers = {}
     module.outputBuffers = {}
     module.connectedInserters = {}
-    
+
     return module
 end
 
@@ -246,7 +376,7 @@ end
 function Module:SetRecipe(recipe)
     self.currentRecipe = recipe
     self.baseCraftingTime = recipe.baseTime*25
-    self.craftingTime = recipe.baseTime
+    self.craftingTime = self.baseCraftingTime
 
     -- Configure input buffers
     local i = 1
@@ -336,7 +466,7 @@ function Module:UpdateCrafting()
                 else
                     -- Calculate spawn position based on buffer's relative position and module rotation
                     local pos = GetDevicePosition(self.deviceId)
-                    local angle = GetDeviceAngle(self.deviceId)
+                    local angle = GetDeviceAngle(self.deviceId) - 1.57079633
                     local spawnPos = RotatePosition(outputBuffer.relativePosition, angle)
                     spawnPos.x = pos.x + spawnPos.x
                     spawnPos.y = pos.y + spawnPos.y
@@ -469,7 +599,7 @@ function Inserter:ConnectModules(input, output)
     if input.position then
         self.inputModule = input
         self.inputNode = nil
-        local angle = GetDeviceAngle(input.deviceId)
+        local angle = GetDeviceAngle(input.deviceId) - 1.57079633
         self.startPosition = RotatePosition(input.relativePosition, angle)
         self.startPosition.x = input.position.x + self.startPosition.x
         self.startPosition.y = input.position.y + self.startPosition.y
@@ -484,7 +614,7 @@ function Inserter:ConnectModules(input, output)
     if output.position then
         self.outputModule = output
         self.outputNode = nil
-        local angle = GetDeviceAngle(output.deviceId)
+        local angle = GetDeviceAngle(output.deviceId) - 1.57079633
         self.endPosition = RotatePosition(output.relativePosition, angle)
         self.endPosition.x = output.position.x + self.endPosition.x
         self.endPosition.y = output.position.y + self.endPosition.y
@@ -585,18 +715,16 @@ Hitbox = {
     maxX = 0,
     maxY = 0,
     minX = 0,
-    minY = 0
+    minY = 0,
+    size = { x = 0, y = 0 }
 }
 
 function Hitbox:New(pos, size)
     local hb = {}
     setmetatable(hb, self)
     self.__index = self
-    hb.maxX = pos.x + size.x
-    hb.maxY = pos.y + size.y
-    hb.minX = pos.x - size.x
-    hb.minY = pos.y - size.y
-    hb.size = size
+    hb.size = { x = size.x / 2, y = size.y / 2 } -- Store half size
+    hb:UpdatePosition(pos)
     return hb
 end
 
@@ -620,6 +748,15 @@ function RotatePosition(position, angle)
         z = 0
     }
 end
+-- Helper function to rotate a point (x, y) by a given angle (in radians)
+function RotatePoint(x, y, angle)
+    local cosAngle = math.cos(angle)
+    local sinAngle = math.sin(angle)
+    return {
+        x = x * cosAngle - y * sinAngle,
+        y = x * sinAngle + y * cosAngle
+    }
+end
 
 function OnKey(key, down)
     if key == "u" and down then
@@ -629,6 +766,12 @@ function OnKey(key, down)
         CreateItem(ProcessedMousePos(),"apple")
     end
     if key == "o" and down then
+        if debugMode then
+            for key, value in pairs(ExistingModules) do
+                value.craftingTime = 0
+                value.baseCraftingTime = 0.5
+            end
+        end
         BetterLog(ExistingModules)
     end
 end
