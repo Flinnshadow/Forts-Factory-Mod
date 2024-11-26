@@ -357,6 +357,8 @@ function CircleCollisionsOnBranch(position, radius, branch, results)
 
 end
 
+
+
 --TODO - this function is being called twice, please fix, also cache normals
 -- It may not be feasible to check if a link is already tested, as the cost of checking may be greater than the cost of testing
 -- Perhaps we could fix it further up the pipeline?
@@ -379,29 +381,50 @@ function CircleCollisionOnLinks(position, radius, node, results)
         -- But it's fast at least!
         local linkX, linkY = nodeBX - nodeAX, nodeBY - nodeAY
         local posToNodeAX, posToNodeAY = nodeAX - positionX, nodeAY - positionY
-        -- Early return if the tested link is obviously pointing away from the test position
-        if posToNodeAX * linkX + posToNodeAY * linkY > 0 then continue end
         local posToNodeBX, posToNodeBY = nodeBX - positionX, nodeBY - positionY
-        -- Early return if the tested link is obviously pointing away from the test position
-        if posToNodeBX * linkX + posToNodeBY * linkY < 0 then continue end
-        
-       
 
+        
+    
+    
         
 
 
         --SpawnLine(nodeA, nodeB, Green(), 0.06)
+        local linkPerpX, linkPerpY = -linkY, linkX
 
+
+        local crossDistToNodeA = posToNodeAX * linkPerpY - posToNodeAY * linkPerpX
+        local crossDistToNodeB = posToNodeBX * linkPerpY - posToNodeBY * linkPerpX
+
+        if (crossDistToNodeA > 0) then
+            local posToNodeASquaredX = posToNodeAX * posToNodeAX
+            local posToNodeASquaredY = posToNodeAY * posToNodeAY
+            if posToNodeASquaredX + posToNodeASquaredY > radius * radius then continue end
+            local dist = -math.sqrt(posToNodeASquaredX + posToNodeASquaredY)
+            local linkNormalX = posToNodeAX / dist
+            local linkNormalY = posToNodeAY / dist
+            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = nodeA.x, y = nodeA.y}, distance = dist, material = link.material, type = 2}
+            continue
+        end
+        if (crossDistToNodeB < 0) then
+            local posToNodeBSquaredX = posToNodeBX * posToNodeBX
+            local posToNodeBSquaredY = posToNodeBY * posToNodeBY
+            if posToNodeBSquaredX + posToNodeBSquaredY > radius * radius then continue end
+            local dist = -math.sqrt(posToNodeBSquaredX + posToNodeBSquaredY)
+            local linkNormalX = posToNodeBX / dist
+            local linkNormalY = posToNodeBY / dist
+            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = nodeB.x, y = nodeB.y}, distance = dist, material = link.material, type = 2}
+            continue
+        end
+        
         local mag = math.sqrt(linkX * linkX + linkY * linkY)
         local linkNormalX, linkNormalY = linkY / mag, -linkX / mag
-
         
         local dist = -posToNodeAX * linkNormalX + -posToNodeAY * linkNormalY -- dot product (can't have nice things)
         if dist < 0 then
             dist = -dist
             linkNormalX = -linkNormalX
             linkNormalY = -linkNormalY
-
         end
         
         if dist < radius then 
@@ -415,7 +438,7 @@ function CircleCollisionOnLinks(position, radius, node, results)
             local t = -distToNodeA / totalDist
             local posX, posY = nodeAX + linkX * t, nodeAY + linkY * t
 
-            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = Vec3(linkNormalX, linkNormalY), pos = Vec3(posX, posY), distance = dist, material = link.material}
+            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = posX, y = posY}, distance = dist, material = link.material, type = 1}
             continue
         end
     end
