@@ -25,6 +25,17 @@ function LoadPhysLib()
     UpdateNodeTable()
 end
 
+function ReloadPhysLib()
+    NodesRaw = {}
+    Nodes = {}
+    NodeTree = {}
+
+    EnumerateStructureLinks(0, -1, "c", true)
+    EnumerateStructureLinks(1, -1, "c", true)
+    EnumerateStructureLinks(2, -1, "c", true)
+    UpdateNodeTable()
+end
+
 function UpdatePhysLib(frame)
 
     -- mod body update
@@ -38,7 +49,17 @@ function UpdatePhysLib(frame)
     SubdivideStructures()
 
 
+    local startPos = Vec3(0, 0)
+    local endPos = ScreenToWorld(GetMousePos())
 
+    local radius = 15
+
+
+    HighlightCapsule(startPos, endPos, radius)
+
+    for i = 1, 1 do
+        local results = CapsuleCollisionOnStructure(startPos, endPos, radius)
+    end
 
 end
 --#endregion
@@ -445,6 +466,219 @@ function CircleCollisionOnLinks(position, radius, node, results)
 end
 --#endregion
 
+--#region Capsule collision
+function CapsuleCollisionOnStructure(posA, posB, radius)
+    local results = {}
+    CapsuleCollisionsOnBranch(posA, posB, radius, NodeTree, results)
+    return results
+end
+function CapsuleCollisionsOnBranch(posA, posB, radius, branch, results)
+    if not branch then return end
+    if branch.deepest then
+        -- Deepest level: Test if within the bounding squares of individual nodes
+        local nodes = branch.children
+
+        for i = 1, #nodes do
+            local node = nodes[i]
+            CapsuleCollisionOnLinks(posA, posB, radius, node, results)
+        end
+        return
+    end
+
+    local ax = posA.x
+    local ay = posA.y
+    local bx = posB.x
+    local by = posB.y
+
+    local rect = branch.rect
+    HighlightExtents(rect, 0.06, Red())
+    local children = branch.children
+    for i = 1, #children do
+        local child = children[i]
+        if not child then continue end
+        local childRect = child.rect
+
+        if LineCollidesWithRect(posA, posB, radius, childRect) then
+            CapsuleCollisionsOnBranch(posA, posB, radius, child, results)
+        end
+    end
+end
+
+
+
+local INSIDE = 0
+local LEFT = 1
+local RIGHT = 2
+local BOTTOM = 4
+local TOP = 8
+
+function ComputeCode(x, y, rect, radius)
+    local minX, minY = rect.minX - radius, rect.minY - radius
+    local maxX, maxY = rect.maxX + radius, rect.maxY + radius
+    
+    local code = INSIDE
+
+    if x < minX then
+        code = code | LEFT
+    elseif x > maxX then
+        code = code | RIGHT
+    end
+    if y < minY then
+        code = code | BOTTOM
+    elseif y > maxY then
+        code = code | TOP
+    end
+
+    return code
+end
+
+function LineCollidesWithRect(posA, posB, radius, rect)
+    local x1, y1 = posA.x, posA.y
+    local x2, y2 = posB.x, posB.y
+
+    local minX, minY = rect.minX - radius, rect.minY - radius
+    local maxX, maxY = rect.maxX + radius, rect.maxY + radius
+
+    local codeA = ComputeCode(x1, y1, rect, radius)
+    local codeB = ComputeCode(x2, y2, rect, radius)
+
+    local accept = false
+
+    while true do
+        if codeA == 0 and codeB == 0 then
+            -- Both are inside
+            accept = true
+            break
+        elseif codeA & codeB ~= 0 then
+            -- Both are outside
+            break
+        else
+            -- Some segment of the line is inside
+
+            local codeOut
+            local x, y
+
+            if codeA ~= 0 then
+                codeOut = codeA
+            else
+                codeOut = codeB
+            end
+
+            if codeOut & TOP ~= 0 then
+                x = x1 + (x2 - x1) * (maxY - y1) / (y2 - y1);
+                y = maxY;
+            elseif codeOut & BOTTOM ~= 0 then
+                x = x1 + (x2 - x1) * (minY - y1) / (y2 - y1);
+                y = minY;
+            elseif codeOut & RIGHT ~= 0 then
+                y = y1 + (y2 - y1) * (maxX - x1) / (x2 - x1);
+                x = maxX;
+            elseif codeOut & LEFT ~= 0 then
+                y = y1 + (y2 - y1) * (minX - x1) / (x2 - x1);
+                x = minX;
+            end
+
+            -- intersection point found
+
+            if codeOut == codeA then
+                x1 = x
+                y1 = y
+                codeA = ComputeCode(x1, y1, rect, radius)
+            else
+                x2 = x
+                y2 = y
+                codeB = ComputeCode(x2, y2, rect, radius)
+            end
+        end
+
+    end
+   
+    if accept then 
+        return true 
+    else 
+        return false 
+
+    end
+end
+
+
+function ClosestPointOnLineSegment(A, B, point)
+
+
+    
+    local ABX, ABY = B.x - A.x, B.y - A.y
+    local t = ((point.x - A.x) * ABX + (point.y - A.y) * ABY) / (ABX * ABX + ABY * ABY)
+
+    t = math.min(math.max(t, 0), 1)
+    return {x = A.x + t * ABX, y = A.y + t * ABY}
+end
+
+function ClosestPointsBetweenLines(AStart, AEnd, BStart, BEnd)
+
+
+    local lineAStartBest = ClosestPointOnLineSegment(BStart, BEnd, AStart)
+    local lineAStartBestLength = (lineAStartBest.x - AStart.x) * (lineAStartBest.x - AStart.x) + (lineAStartBest.y - AStart.y) * (lineAStartBest.y - AStart.y)
+
+    local lineAEndBest = ClosestPointOnLineSegment(BStart, BEnd, AEnd)
+    local lineAEndBestLength = (lineAEndBest.x- AEnd.x) * (lineAEndBest.x - AEnd.x) + (lineAEndBest.y - AEnd.y) * (lineAEndBest.y - AEnd.y)
+
+    
+    local lineBStartBest = ClosestPointOnLineSegment(AStart, AEnd, BStart)
+    local lineBStartBestLength = (lineBStartBest.x - BStart.x) * (lineBStartBest.x - BStart.x) + (lineBStartBest.y - BStart.y) * (lineBStartBest.y - BStart.y)
+
+    local lineBEndBest = ClosestPointOnLineSegment(AStart, AEnd, BEnd)
+    local lineBEndBestLength = (lineBEndBest.x - BEnd.x) * (lineBEndBest.x - BEnd.x) + (lineBEndBest.y - BEnd.y) * (lineBEndBest.y - BEnd.y)
+
+    local bestA, bestB, bestALength, bestBLength
+
+    
+    if lineAStartBestLength < lineAEndBestLength then
+        bestA = lineAStartBest
+        bestALength = lineAStartBestLength
+    else
+        bestA = lineAEndBest
+        bestALength = lineAEndBestLength
+    end
+    
+    if lineBStartBestLength < lineBEndBestLength then
+        bestB = lineBStartBest
+        bestBLength = lineBStartBestLength
+    else
+        bestB = lineBEndBest
+        bestBLength = lineBEndBestLength
+    end
+
+    if bestALength < bestBLength then
+        bestB = ClosestPointOnLineSegment(AStart, AEnd, bestA)
+        bestA = ClosestPointOnLineSegment(BStart, BEnd, bestB)
+
+        return bestA, bestB
+    else
+        bestA = ClosestPointOnLineSegment(BStart, BEnd, bestB)
+        bestB = ClosestPointOnLineSegment(AStart, AEnd, bestA)
+
+        return bestA, bestB
+    end
+end
+
+function CapsuleCollisionOnLinks(posA, posB, radius, node, results)
+    for _, link in pairs(node.links) do
+        local nodeA = node
+        local nodeB = link.node
+        
+        local linkX, linkY = nodeB.x - nodeA.x, nodeB.y - nodeA.y
+
+        local capsuleX, capsuleY = posB.x - posA.x, posB.y - posA.y
+
+        local closestPointLink, closestPointCapsule = ClosestPointsBetweenLines(posA, posB, nodeA, nodeB)
+
+        SpawnCircle(closestPointCapsule, radius, Red(), 0.06)
+        SpawnCircle(closestPointLink, radius, Blue(), 0.06)
+        SpawnLine(closestPointCapsule, closestPointLink, White(), 0.06)
+    end
+end
+--#endregion
+
 --#region Utility
 function GetNodeRectangle(nodes)
     local huge = math.huge
@@ -563,6 +797,18 @@ function HighlightExtents(extents, duration, color)
     SpawnLine(bottomRight, bottomLeft, color, duration)
     SpawnLine(bottomLeft, topLeft, color, duration)
 end
+
+function HighlightCapsule(posA, posB, radius)
+    SpawnCircle(posA, radius, White(), 0.06)
+    SpawnCircle(posB, radius, White(), 0.06)
+    local lineUnit = Vec2Normalize(posB - posA)
+    local linePerp = Vec2Perp(lineUnit)
+    linePerp = Vec3(linePerp.x, linePerp.y, 0)
+    SpawnLine(posA + radius * linePerp, posB + radius * linePerp, White(), 0.06)
+    SpawnLine(posA - radius * linePerp, posB - radius * linePerp, White(), 0.06)
+
+end
+
 
 function FlattenTable(input)
     local output = {}
