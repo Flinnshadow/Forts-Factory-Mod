@@ -17,6 +17,36 @@ ItemDefinitions = {
     ["Ammo2"] = {MaterialType = "MoAndKrill",CoreValue = Value(128,0)},
 }
 
+-- TODO: move to it's own file
+LinkDefinitions = {
+    [""] = {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = 0},
+    ["bracing"] = {DynamicFriction = 1, StaticFriction = 8, ConveyorSpeed = 0},
+    ["armour"] = {DynamicFriction = 0.05, StaticFriction = 0, ConveyorSpeed = 0},
+    ["door"] = {DynamicFriction = 0.05, StaticFriction = 8, ConveyorSpeed = 0},
+    ["rope"] = {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = 0},
+    ["fuse"] = {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = 0},
+    ["shield"] = {DynamicFriction = 0, StaticFriction = 0, ConveyorSpeed = 0},
+    ["portal"] = {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = 0},
+    ["solarpanel"] = {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = 0},
+    --conveyor 1
+    ["c1l"]  =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = -120}, -- left
+    ["c1r"]  =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed =  120}, -- right
+    ["c1pl"] =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = -240}, -- left powered
+    ["c1pr"] =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed =  240}, -- right powered
+    
+    --conveyor 2
+    ["c2l"]  =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = -240},
+    ["c2r"]  =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed =  240},
+    ["c2pl"] =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = -480},
+    ["c2pr"] =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed =  480},
+
+    -- conveyor 3
+    ["c3l"]  =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = -480},
+    ["c3r"]  =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed =  480},
+    ["c3pl"] =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed = -960},
+    ["c3pr"] =  {DynamicFriction = 4, StaticFriction = 8, ConveyorSpeed =  960},
+}
+
 -- Global Storage
 PhysicsObjects = {}
 PhysicsObjectLifeSpans = {}
@@ -38,13 +68,15 @@ function CreateItem(pos, iType, effectId)
         radius = 50 / 2,
         springConst = 400,
         dampening = 20,
-        friction = 15,
-        staticFriction = 15,
+        DynamicFriction = 4,
+        StaticFriction = 4,
     }
     PhysicsObjects[GlobalItemIterator] = Obj
-    ScheduleCall(30, DestroyItem, Obj, GlobalItemIterator)
+    ScheduleCall(300, DestroyItem, Obj, GlobalItemIterator)
     return Obj
 end
+
+
 
 function DestroyItem(item, itemKey, preserveEffect)
     if not preserveEffect then
@@ -52,10 +84,6 @@ function DestroyItem(item, itemKey, preserveEffect)
     end
     PhysicsObjects[itemKey] = nil
 end
-
-local conveyorSpeed = 120
-
-
 local maxPhysicsStep = 8
 
 function UpdatePhysicsObjects()
@@ -107,9 +135,6 @@ function UpdatePhysicsObjects()
                 if snapResult.type == 1 then
                     filteredResults[#filteredResults + 1] = snapResult
                 end
-                snapResult.conveyorType = 0
-                if snapResult.material == "Conveyor" then snapResult.conveyorType = 1
-                elseif snapResult.material == "ConveyorInverted" then snapResult.conveyorType = 2 end
             end
             if #filteredResults == 0 then
                 filteredResults = noBackgroundResults
@@ -118,19 +143,16 @@ function UpdatePhysicsObjects()
             for i = 1, #filteredResults do
                 local snapResult = filteredResults[i]
                 local materialSaveName = snapResult.material
+
+                local linkDefinition = LinkDefinitions[materialSaveName]
                 local normal = Vec3(snapResult.normal.x, snapResult.normal.y, 0)
                 local platformVelocity = Vec2Average({ NodeVelocity(snapResult.nodeA.id), NodeVelocity(snapResult.nodeB
                 .id) })
                 -- Perform collision in the frame of reference of the object that it is colliding with
-                velocity = velocity - platformVelocity
                 local parallel = Vec3(normal.y, -normal.x, 0)
+                velocity = velocity - platformVelocity + linkDefinition.ConveyorSpeed * parallel
+                
 
-
-                if snapResult.conveyorType == 1 then
-                    velocity = velocity + conveyorSpeed * parallel
-                elseif snapResult.conveyorType == 2 then
-                    velocity = velocity - conveyorSpeed * parallel
-                end
 
                 -- Helper vectors
                 local objPos = Object.position
@@ -150,22 +172,18 @@ function UpdatePhysicsObjects()
                 -- Spring force
                 local force = Object.springConst * (physicsStep ^ 2) * error -
                 (Object.dampening * velocityPerpToSurface * normal)
+
+                local gravityFriction = -gravity * normal.y / 1000
                 -- Dynamic friction
-                force = force - Object.friction * velocityParallelToSurface * parallel
+                force = force - Object.DynamicFriction * linkDefinition.DynamicFriction * gravityFriction * velocityParallelToSurface * parallel  
                 velocity = velocity + delta * force
                 -- Return back to world frame
-                velocity = velocity + platformVelocity
-                if snapResult.conveyorType == 1 then
-                    velocity = velocity - conveyorSpeed * parallel
-                elseif snapResult.conveyorType == 2 then
-                    velocity = velocity + conveyorSpeed * parallel
-                end
-
+                velocity = velocity + platformVelocity - linkDefinition.ConveyorSpeed * parallel
                 -- Set velocity
                 Object.velocity = velocity
 
                 -- Static friction
-                if (math.abs(velocityParallelToSurface) < Object.staticFriction) then
+                if (math.abs(velocityParallelToSurface) < (Object.StaticFriction * linkDefinition.StaticFriction * gravityFriction)) then
                     Object.velocity = velocity - velocityParallelToSurface * parallel
                 end
             end
