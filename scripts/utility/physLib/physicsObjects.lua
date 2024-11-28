@@ -23,7 +23,7 @@ function UpdatePhysicsObjects()
 end
 
 
-function RegisterPhysicsObject(pos, radius, velocity, objectDefinition)
+function RegisterPhysicsObject(pos, radius, velocity, objectDefinition, effectId)
     pos = pos or Vec3(0, 0, 0)
     radius = radius or 50 / 2
     velocity = velocity or Vec3(0, 0, 0)
@@ -33,6 +33,8 @@ function RegisterPhysicsObject(pos, radius, velocity, objectDefinition)
         radius = radius,
         velocity = velocity,
         objectDefinition = objectDefinition,
+        lastPos = pos,
+        effectId = effectId
     }
     PhysicsObjects[#PhysicsObjects + 1] = Object
     return Object
@@ -49,6 +51,11 @@ end
 
 
 function UpdateObjects()
+    for i = 1, #PhysicsObjects do
+        local Object = PhysicsObjects[i]
+        Object.lastPos = Object.pos
+    end
+
     for i = 1, #PhysicsObjects do
         local Object = PhysicsObjects[i]
         local velocity = Object.velocity

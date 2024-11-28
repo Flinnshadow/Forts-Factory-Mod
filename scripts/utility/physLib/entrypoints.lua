@@ -37,13 +37,7 @@ function UpdatePhysLib(frame)
 
     SubdivideStructures()
     UpdatePhysicsObjects()
-
-
-    -- HighlightCapsule(startPos, endPos, radius)
-
-    -- for i = 1, 1 do
-    --     local results = CapsuleCollisionOnStructure(startPos, endPos, radius)
-    -- end
+    PhysLibRender.PhysicsUpdate()
 end
 
 

@@ -24,3 +24,7 @@ function Update(frame)
     UpdateModules()
 
 end
+
+function OnDraw()
+    PhysLibRender.OnDraw()
+end
