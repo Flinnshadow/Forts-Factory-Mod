@@ -4,6 +4,7 @@ dofile("scripts/forts.lua")
 dofile(path .. "/scripts/utility/physLib/entrypoints.lua")
 dofile(path .. "/scripts/utility/physLib/structures.lua")
 dofile(path .. "/scripts/utility/physLib/physicsObjects.lua")
+dofile(path .. "/scripts/utility/physLib/render.lua")
 --#endregion
 
 --#region Global tables
