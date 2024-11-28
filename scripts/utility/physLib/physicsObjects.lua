@@ -93,7 +93,7 @@ function UpdateObjects()
                 local displacementVector = displacement * normal
 
                 Object.pos = Object.pos - {x = displacementVector.x / 2, y = displacementVector.y / 2, z = 0}
-                collidingObject.pos = collidingObject.pos + {x = displacementVector.x / 2, y = displacementVector.y / 2, z = 0}
+                collidingObject.pos = {x = collidingObject.pos.x + displacementVector.x / 2, y = collidingObject.pos.y + displacementVector.y / 2, z = 0}
 
                 Object.velocity = velocity - Vec2Dot(relativeVelocity, normal) / 2 * normal
                 collidingObject.velocity = collidingVelocity + Vec2Dot(relativeVelocity, normal) / 2 * normal
