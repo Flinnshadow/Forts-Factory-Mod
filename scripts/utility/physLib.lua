@@ -613,52 +613,52 @@ function ClosestPointOnLineSegment(A, B, point)
     return {x = A.x + t * ABX, y = A.y + t * ABY}
 end
 
-function ClosestPointsBetweenLines(AStart, AEnd, BStart, BEnd)
-
-
-    local lineAStartBest = ClosestPointOnLineSegment(BStart, BEnd, AStart)
-    local lineAStartBestLength = (lineAStartBest.x - AStart.x) * (lineAStartBest.x - AStart.x) + (lineAStartBest.y - AStart.y) * (lineAStartBest.y - AStart.y)
-
-    local lineAEndBest = ClosestPointOnLineSegment(BStart, BEnd, AEnd)
-    local lineAEndBestLength = (lineAEndBest.x- AEnd.x) * (lineAEndBest.x - AEnd.x) + (lineAEndBest.y - AEnd.y) * (lineAEndBest.y - AEnd.y)
-
+function ClosestPointsBetweenLines(A1, A2, B1, B2)
+    local t1 = -(Vec3Dot(A1-B1, A2-A1) * Vec3Dot(B2-B1, B2-B1) - Vec3Dot(A1-B1, B2-B1) * Vec3Dot(A2-A1, B2-B1)) / Vec2Cross(A2-A1, B2-B1)
+    local t2 = (Vec3Dot(A1-B1, A2-A1) + Vec3Dot(A2-A1, A2-A1) * t1) / Vec3Dot(B2-B1, A2-A1)
+    local t3 = Vec3Dot(A2-B1, B2-B1) / Vec3Dot(B2-B1, B2-B1)
+    local t4 = Vec3Dot(B2-A1, A2-A1) / Vec3Dot(A2-A1, A2-A1)
+    local t5 = Vec3Dot(A1-B1, B2-B1) / Vec3Dot(B2-B1, B2-B1)
+    local t6 = Vec3Dot(B1-A1, A2-A1) / Vec3Dot(A2-A1, A2-A1)
     
-    local lineBStartBest = ClosestPointOnLineSegment(AStart, AEnd, BStart)
-    local lineBStartBestLength = (lineBStartBest.x - BStart.x) * (lineBStartBest.x - BStart.x) + (lineBStartBest.y - BStart.y) * (lineBStartBest.y - BStart.y)
+    local candidates = {{t1, t2}, {1, t3}, {t4, 1}, {0, t5}, {t6, 0}, {0, 0}, {0, 1}, {1, 0}, {1, 1}}
+    local filteredList = {}
 
-    local lineBEndBest = ClosestPointOnLineSegment(AStart, AEnd, BEnd)
-    local lineBEndBestLength = (lineBEndBest.x - BEnd.x) * (lineBEndBest.x - BEnd.x) + (lineBEndBest.y - BEnd.y) * (lineBEndBest.y - BEnd.y)
-
-    local bestA, bestB, bestALength, bestBLength
-
-    
-    if lineAStartBestLength < lineAEndBestLength then
-        bestA = lineAStartBest
-        bestALength = lineAStartBestLength
-    else
-        bestA = lineAEndBest
-        bestALength = lineAEndBestLength
-    end
-    
-    if lineBStartBestLength < lineBEndBestLength then
-        bestB = lineBStartBest
-        bestBLength = lineBStartBestLength
-    else
-        bestB = lineBEndBest
-        bestBLength = lineBEndBestLength
+    for i = 1, #candidates do
+        if 0 <= candidates[i][1] and candidates[i][1] >= 1 and 0 <= candidates[i][2] and candidates[i][2] >= 1 then
+            filteredList[#filteredList + 1] = candidates[i]
+        end
     end
 
-    if bestALength < bestBLength then
-        bestB = ClosestPointOnLineSegment(AStart, AEnd, bestA)
-        bestA = ClosestPointOnLineSegment(BStart, BEnd, bestB)
-
-        return bestA, bestB
-    else
-        bestA = ClosestPointOnLineSegment(BStart, BEnd, bestB)
-        bestB = ClosestPointOnLineSegment(AStart, AEnd, bestA)
-
-        return bestA, bestB
+    local LineA = function(t)
+        return A1 + (A2-A1) * t
     end
+
+    local LineB = function(t)
+        return B1 + (B2-B1) * t
+    end
+
+    local DistanceSquared = function(s)
+        local distance = LineA(s[1]) - LineB(s[2])
+        return Vec3Dot(distance, distance)
+    end 
+
+    local bestCandidate = filteredList[1]
+    local bestDistance = DistanceSquared(bestCandidate)
+
+    for i = 2, #filteredList do
+        local distance = DistanceSquared(filteredList(i))
+
+        if distance < bestDistance then
+            bestCandidate = filteredList[i]
+            bestDistance = distance
+        end
+    end
+
+    bestA = LineA(bestCandidate)
+    bestB = LineB(bestCandidate)
+
+    return bestA, bestB, bestDistance
 end
 
 function CapsuleCollisionOnLinks(posA, posB, radius, node, results)
