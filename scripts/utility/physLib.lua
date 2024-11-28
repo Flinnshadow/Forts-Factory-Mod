@@ -630,7 +630,7 @@ function ClosestPointOnLineSegment(A, B, point)
 end
 
 function ClosestPointsBetweenLines(A1, A2, B1, B2)
-    local t1 = -(Vec3Dot(A1-B1, A2-A1) * Vec3Dot(B2-B1, B2-B1) - Vec3Dot(A1-B1, B2-B1) * Vec3Dot(A2-A1, B2-B1)) / Vec2Cross(A2-A1, B2-B1)
+    local t1 = -(Vec3Dot(A1-B1, A2-A1) * Vec3Dot(B2-B1, B2-B1) - Vec3Dot(A1-B1, B2-B1) * Vec3Dot(A2-A1, B2-B1)) / (Vec2Cross(A2-A1, B2-B1) * Vec2Cross(A2-A1, B2-B1))
     local t2 = (Vec3Dot(A1-B1, A2-A1) + Vec3Dot(A2-A1, A2-A1) * t1) / Vec3Dot(B2-B1, A2-A1)
     local t3 = Vec3Dot(A2-B1, B2-B1) / Vec3Dot(B2-B1, B2-B1)
     local t4 = Vec3Dot(B2-A1, A2-A1) / Vec3Dot(A2-A1, A2-A1)
@@ -671,7 +671,7 @@ function ClosestPointsBetweenLines(A1, A2, B1, B2)
             bestDistance = distance
         end
     end
-    
+
     return LineA(bestCandidate[1]), LineB(bestCandidate[2]), bestDistance
 end
 
