@@ -86,7 +86,7 @@ function DestroyItem(item, itemKey, preserveEffect)
 end
 local maxPhysicsStep = 8
 
-function UpdatePhysicsObjects()
+function UpdateItemObjects()
     for key, Object in pairs(PhysicsObjects) do
 
         local deviceCheckSnapResult = SnapToWorld(Object.pos, Object.radius * 3, SNAP_DEVICES, -1, -1, "")

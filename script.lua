@@ -19,7 +19,7 @@ end
 
 function Update(frame)
     UpdatePhysLib(frame)
-    UpdatePhysicsObjects()
+    UpdateItemObjects()
 
     UpdateModules()
 

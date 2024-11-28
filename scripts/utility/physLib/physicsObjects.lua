@@ -13,6 +13,15 @@ local defaultObjectDefinition = {
 PhysicsObjects = {}
 PhysicsObjectsTree = {}
 
+function UpdatePhysicsObjects()
+
+    local worldExtents = GetWorldExtents()
+    local extents = {minX = worldExtents.MinX, minY = worldExtents.MinY, maxX = worldExtents.MaxX, maxY = worldExtents.MaxY}
+    PhysicsObjectsTree = SubdividePoses(PhysicsObjects, extents)
+    UpdateObjects()
+
+end
+
 
 function RegisterPhysicsObject(pos, radius, velocity, objectDefinition)
     pos = pos or Vec3(0, 0, 0)

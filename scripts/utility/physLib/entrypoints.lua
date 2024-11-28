@@ -25,12 +25,8 @@ end
 
 Dot = 0
 function UpdatePhysLib(frame)
-    -- Temporary
-    local worldExtents = GetWorldExtents()
-    local extents = {minX = worldExtents.MinX, minY = worldExtents.MinY, maxX = worldExtents.MaxX, maxY = worldExtents.MaxY}
-    PhysicsObjectsTree = SubdividePoses(PhysicsObjects, extents)
-    UpdateObjects()
-
+   
+    
     -- mod body update
     for i = 1, #Nodes do
         local node = Nodes[i]
@@ -40,8 +36,7 @@ function UpdatePhysLib(frame)
     end
 
     SubdivideStructures()
-
-
+    UpdatePhysicsObjects()
 
 
     -- HighlightCapsule(startPos, endPos, radius)
