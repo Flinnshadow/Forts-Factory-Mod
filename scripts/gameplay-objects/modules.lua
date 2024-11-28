@@ -11,7 +11,7 @@ local DEFAULT_ITEM_SPACING = 0.2
 
 ModuleCreationDefinitions = {
     ["derrick"] = function (newModule)
-        newModule:AddOutputBuffer(12,"IronOre",Vec3(-40,-250))
+        newModule:AddOutputBuffer(12,"Oil",Vec3(-40,-250))
         newModule:SetRecipe({
             baseTime = 10,
             inputs = {},
