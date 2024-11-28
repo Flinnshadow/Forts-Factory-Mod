@@ -663,18 +663,16 @@ function ClosestPointsBetweenLines(A1, A2, B1, B2)
     local bestDistance = DistanceSquared(bestCandidate)
 
     for i = 2, #filteredList do
-        local distance = DistanceSquared(filteredList(i))
+        local candidate = filteredList[i]
+        local distance = DistanceSquared(candidate)
 
         if distance < bestDistance then
-            bestCandidate = filteredList[i]
+            bestCandidate = candidate
             bestDistance = distance
         end
     end
-
-    bestA = LineA(bestCandidate)
-    bestB = LineB(bestCandidate)
-
-    return bestA, bestB, bestDistance
+    
+    return LineA(bestCandidate[1]), LineB(bestCandidate[2]), bestDistance
 end
 
 function CapsuleCollisionOnLinks(posA, posB, radius, node, results)
