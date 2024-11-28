@@ -1,4 +1,3 @@
-dofile(path .. "/scripts/utility/physlib/structures.lua")
 
 
 function LoadPhysLib()
@@ -26,11 +25,11 @@ end
 
 Dot = 0
 function UpdatePhysLib(frame)
-    if frame == 1 then
-        TestPositionSubtree()
-    end
-
-    
+    -- Temporary
+    local worldExtents = GetWorldExtents()
+    local extents = {minX = worldExtents.MinX, minY = worldExtents.MinY, maxX = worldExtents.MaxX, maxY = worldExtents.MaxY}
+    ObjectsTree = SubdividePoses(Objects, extents)
+    UpdateObjects()
 
     -- mod body update
     for i = 1, #Nodes do
@@ -43,17 +42,13 @@ function UpdatePhysLib(frame)
     SubdivideStructures()
 
 
-    local startPos = Vec3(0, 0)
-    local endPos = ScreenToWorld(GetMousePos())
-
-    local radius = 15
 
 
-    HighlightCapsule(startPos, endPos, radius)
+    -- HighlightCapsule(startPos, endPos, radius)
 
-    for i = 1, 1 do
-        local results = CapsuleCollisionOnStructure(startPos, endPos, radius)
-    end
+    -- for i = 1, 1 do
+    --     local results = CapsuleCollisionOnStructure(startPos, endPos, radius)
+    -- end
 end
 
 
