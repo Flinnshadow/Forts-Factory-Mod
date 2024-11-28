@@ -5,7 +5,10 @@ dofile(path .. "/scripts/math/math.lua")
 dofile(path .. "/scripts/math/vector.lua")
 dofile(path .. "/scripts/gameplay-objects/items.lua")
 dofile(path .. "/scripts/gameplay-objects/modules.lua")
-dofile(path .. "/scripts/utility/physLib.lua")
+
+dofile(path .. "/scripts/utility/physLib/physLib.lua")
+dofile(path .. "/scripts/utility/physLib/entrypoints.lua")
+dofile(path .. "/scripts/utility/physLib/structure.lua")
 debugMode = true
 
 
