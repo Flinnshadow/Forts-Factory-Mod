@@ -10,11 +10,11 @@ local defaultObjectDefinition = {
 }
 
 
-Objects = {}
-ObjectsTree = {}
+PhysicsObjects = {}
+PhysicsObjectsTree = {}
 
 
-function RegisterNewObject(pos, radius, velocity, objectDefinition)
+function RegisterPhysicsObject(pos, radius, velocity, objectDefinition)
     pos = pos or Vec3(0, 0, 0)
     radius = radius or 50 / 2
     velocity = velocity or Vec3(0, 0, 0)
@@ -25,13 +25,13 @@ function RegisterNewObject(pos, radius, velocity, objectDefinition)
         velocity = velocity,
         objectDefinition = objectDefinition,
     }
-    Objects[#Objects + 1] = Object
+    PhysicsObjects[#PhysicsObjects + 1] = Object
     return Object
 end
-function UnregisterObject(Object)
-    for i = 1, #Objects do
-        if Objects[i] == Object then
-            table.remove(Objects, i)
+function UnregisterPhysicsObject(Object)
+    for i = 1, #PhysicsObjects do
+        if PhysicsObjects[i] == Object then
+            table.remove(PhysicsObjects, i)
             return
         end
     end
@@ -40,8 +40,8 @@ end
 
 
 function UpdateObjects()
-    for i = 1, #Objects do
-        local Object = Objects[i]
+    for i = 1, #PhysicsObjects do
+        local Object = PhysicsObjects[i]
         local velocity = Object.velocity
         local radius = Object.radius
         local physicsStep = math.clamp(math.ceil((Vec2Mag(velocity) * data.updateDelta) / (radius)), 1, maxPhysicsStep)
@@ -53,7 +53,7 @@ function UpdateObjects()
             Object.pos = Object.pos + (delta * 0.5 * Object.velocity)
             Object.velocity.y = Object.velocity.y + gravity * delta
             Object.pos = Object.pos + (delta * 0.5 * Object.velocity)
-            SpawnCircle(Object.pos, Object.radius, Red(), 0.06)
+            --SpawnCircle(Object.pos, Object.radius, Red(), 0.06)
 
 
             local velocity = Object.velocity
@@ -161,7 +161,7 @@ function UpdateObjects()
 
             
         end
-        SpawnCircle(Object.pos, Object.radius, White(), 0.06)
+        --SpawnCircle(Object.pos, Object.radius, White(), 0.06)
     end
 end
 
@@ -207,7 +207,7 @@ end
 
 function GetOtherCollidingObjects(collider)
     local results = {}
-    TestObjectOnObjectCollision(ObjectsTree, collider, results)
+    TestObjectOnObjectCollision(PhysicsObjectsTree, collider, results)
     return results
 end
 

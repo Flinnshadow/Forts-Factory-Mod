@@ -28,7 +28,7 @@ function UpdatePhysLib(frame)
     -- Temporary
     local worldExtents = GetWorldExtents()
     local extents = {minX = worldExtents.MinX, minY = worldExtents.MinY, maxX = worldExtents.MaxX, maxY = worldExtents.MaxY}
-    ObjectsTree = SubdividePoses(Objects, extents)
+    PhysicsObjectsTree = SubdividePoses(PhysicsObjects, extents)
     UpdateObjects()
 
     -- mod body update

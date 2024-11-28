@@ -3,7 +3,7 @@ dofile("scripts/forts.lua")
 
 dofile(path .. "/scripts/utility/physLib/entrypoints.lua")
 dofile(path .. "/scripts/utility/physLib/structures.lua")
-dofile(path .. "/scripts/utility/physLib/objects.lua")
+dofile(path .. "/scripts/utility/physLib/physicsObjects.lua")
 --#endregion
 
 --#region Global tables
@@ -12,9 +12,6 @@ NodesRaw = {}
 Nodes = {}
 NodeTree = {}
 
-
-Objects = {}
-ObjectsTree = {}
 --#endregion
 
 

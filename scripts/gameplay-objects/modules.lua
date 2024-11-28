@@ -761,7 +761,6 @@ end
 function OnKey(key, down)
     if key == "u" and down then
         CreateItem(ProcessedMousePos(),"IronOre")
-        Objects[#Objects+1] = {pos = ProcessedMousePos(), velocity = Vec3(0,0), radius = 25, accumulatedDisplacement = Vec3(0,0)}
     end
     if key == "i" and down then
         CreateItem(ProcessedMousePos(),"apple")
