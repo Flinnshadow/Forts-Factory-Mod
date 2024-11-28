@@ -14,8 +14,8 @@ function Load()
     gravity = GetConstant("Physics.Gravity")
 end
 
-function Update()
-    UpdatePhysLib()
+function Update(frame)
+    UpdatePhysLib(frame)
     UpdatePhysicsObjects()
 
     UpdateModules()
