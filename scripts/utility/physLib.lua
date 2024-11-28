@@ -9,9 +9,14 @@ dofile(path .. "/utility/BetterLog.lua")
 NodesRaw = {}
 Nodes = {}
 NodeTree = {}
+
+
+Objects = {}
+ObjectsTree = {}
 --#endregion
 
 --#region Entrypoints
+
 
 
 function LoadPhysLib()
@@ -23,6 +28,11 @@ function LoadPhysLib()
     EnumerateStructureLinks(1, -1, "c", true)
     EnumerateStructureLinks(2, -1, "c", true)
     UpdateNodeTable()
+
+    
+
+
+
 end
 
 function ReloadPhysLib()
@@ -36,7 +46,14 @@ function ReloadPhysLib()
     UpdateNodeTable()
 end
 
+
+Dot = 0
 function UpdatePhysLib(frame)
+    if frame == 1 then
+        TestPositionSubtree()
+    end
+
+    
 
     -- mod body update
     for i = 1, #Nodes do
@@ -60,7 +77,6 @@ function UpdatePhysLib(frame)
     for i = 1, 1 do
         local results = CapsuleCollisionOnStructure(startPos, endPos, radius)
     end
-
 end
 --#endregion
 
@@ -820,3 +836,114 @@ function FlattenTable(input)
     return output
 end
 --#endregion
+
+
+function TestPositionSubtree()
+    local worldExtents = GetWorldExtents()
+    local poses = {}
+    for i = 1, 500 do
+        local x = GetRandomFloat(worldExtents.MinX, worldExtents.MaxX, "")
+        local y = GetRandomFloat(worldExtents.MinY, worldExtents.MaxY, "")
+        local radius = 50
+        local pos = Vec3(x, y)
+        pos.radius = 50
+        SpawnCircle(pos, radius, White(), 99999)
+        poses[#poses + 1] = pos
+
+        
+
+    end
+
+    local extents = {minX = worldExtents.MinX, minY = worldExtents.MinY, maxX = worldExtents.MaxX, maxY = worldExtents.MaxY}
+    ObjectTree = SubdividePoses(poses, extents)
+
+    for i = 1, #poses do
+        local pos = poses[i]
+        TestObjectOnObjectCollision(ObjectTree, pos)
+    end
+end
+
+function SubdividePoses(poses, extents)
+    if #poses <= 2 then return {children = poses, leaf = true} end
+
+    local subA = {}
+    local subB = {}
+    local subC = {}
+    local subD = {}
+
+    local center = Vec3((extents.minX + extents.maxX) / 2, (extents.minY + extents.maxY) / 2)
+    extents.center = center
+
+    SpawnLine(Vec3(center.x, extents.minY), Vec3(center.x, extents.maxY), White(), 999)
+    SpawnLine(Vec3(extents.minX, center.y), Vec3(extents.maxX, center.y), White(), 999)
+    for i = 1, #poses do
+        local pos = poses[i]
+        if pos.x < center.x then
+            if pos.y < center.y then
+                subA[#subA + 1] = pos
+            else
+                subB[#subB + 1] = pos
+            end
+        else
+            if pos.y < center.y then
+                subC[#subC + 1] = pos
+            else
+                subD[#subD + 1] = pos
+            end
+        end
+    end
+
+    subA = SubdividePoses(subA, {minX = extents.minX, minY = extents.minY, maxX = center.x, maxY = center.y})
+    subB = SubdividePoses(subB, {minX = extents.minX, minY = center.y, maxX = center.x, maxY = extents.maxY})
+    subC = SubdividePoses(subC, {minX = center.x, minY = extents.minY, maxX = extents.maxX, maxY = center.y})
+    subD = SubdividePoses(subD, {minX = center.x, minY = center.y, maxX = extents.maxX, maxY = extents.maxY})
+
+    return {children = {subA, subB, subC, subD}, rect = extents, leaf = false}
+end
+
+MaxRadius = 50 -- Placeholder
+function TestObjectOnObjectCollision(branch, collider)
+    if branch.leaf then
+        for i = 1, #branch.children do
+            local collidee = branch.children[i]
+
+            if collidee == collider then continue end
+
+            local posAtoPosB = collidee - collider
+            local distSquared = posAtoPosB.x * posAtoPosB.x + posAtoPosB.y * posAtoPosB.y
+            local combinedRadius = collider.radius + collidee.radius
+            combinedRadius = combinedRadius * combinedRadius
+            if distSquared < combinedRadius then
+                SpawnLine(collider, collidee, Red(), 999)
+            end
+        end
+        return
+    end
+    local x = collider.x
+    local y = collider.y
+    local radius = collider.radius
+
+    local center = branch.rect.center
+
+    local subTrees = branch.children
+    if x < center.x + radius + MaxRadius then
+        if y < center.y + radius + MaxRadius then
+            TestObjectOnObjectCollision(subTrees[1], collider)
+        end
+        if y > center.y - radius - MaxRadius then
+            TestObjectOnObjectCollision(subTrees[2], collider)
+        end
+    end
+    if x > center.x - radius - MaxRadius then
+        if y < center.y + radius + MaxRadius then
+            TestObjectOnObjectCollision(subTrees[3], collider)
+        end
+        if y > center.y - radius - MaxRadius then
+            TestObjectOnObjectCollision(subTrees[4], collider)
+        end
+    end
+
+end
+
+
+local min = thingA < thingB and thingA or thingB
