@@ -181,13 +181,12 @@ function ClosestPointsBetweenLines(A1, A2, B1, B2)
     local filteredList = {}
 
     for i = 1, #candidates do
-        if 0 <= candidates[i][1] and candidates[i][1] >= 1 and 0 <= candidates[i][2] and candidates[i][2] >= 1 then
+        if 0 <= candidates[i][1] and candidates[i][1] <= 1 and 0 <= candidates[i][2] and candidates[i][2] <= 1 then
             filteredList[#filteredList + 1] = candidates[i]
         end
     end
 
     local LineA = function(t)
-        return A1 + (A2-A1) * t
         return A1 + t * (A2-A1)
     end
 
