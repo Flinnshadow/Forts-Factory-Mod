@@ -48,8 +48,8 @@ LinkDefinitions = {
 }
 
 -- Global Storage
-PhysicsObjects = {}
-PhysicsObjectLifeSpans = {}
+ItemObjects = {}
+ItemObjectLifeSpans = {}
 
 -- Item Creation and Destruction
 function CreateItem(pos, iType, effectId)
@@ -57,7 +57,7 @@ function CreateItem(pos, iType, effectId)
     local iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
 
     -- Use existing effect or create new one
-    local id = effectId or SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
+    local effectId = effectId or SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
 
     local radius = 50 / 2
     local definition = {
@@ -66,11 +66,10 @@ function CreateItem(pos, iType, effectId)
         DynamicFriction = 4,
         StaticFriction = 4,
     }
-    Obj = RegisterPhysicsObject(pos, radius, Vec3(0, 0, 0), definition)
+    Obj = RegisterPhysicsObject(pos, radius, Vec3(0, 0, 0), definition, effectId)
     Obj.itemType = iType
-    Obj.effectId = id
     Obj.id = GlobalItemIterator
-    PhysicsObjects[GlobalItemIterator] = Obj
+    ItemObjects[GlobalItemIterator] = Obj
     ScheduleCall(300, DestroyItem, Obj, GlobalItemIterator)
     return Obj
 end
@@ -81,13 +80,13 @@ function DestroyItem(item, itemKey, preserveEffect)
     if not preserveEffect then
         CancelEffect(item.effectId)
     end
-    PhysicsObjects[itemKey] = nil
+    ItemObjects[itemKey] = nil
     UnregisterPhysicsObject(item)
 end
 local maxPhysicsStep = 8
 
 function UpdateItemObjects()
-    for key, Object in pairs(PhysicsObjects) do
+    for key, Object in pairs(ItemObjects) do
 
         local deviceCheckSnapResult = SnapToWorld(Object.pos, Object.radius * 3, SNAP_DEVICES, -1, -1, "")
         if GetDeviceType(deviceCheckSnapResult.DeviceId) == "reactor" then
@@ -98,6 +97,5 @@ function UpdateItemObjects()
             end
         end
 
-        SetEffectPosition(Object.effectId, Object.pos)
     end
 end
