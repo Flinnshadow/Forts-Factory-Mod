@@ -774,6 +774,9 @@ function OnKey(key, down)
         end
         BetterLog(ExistingModules)
     end
+    if key == "y" and down then
+        ReloadPhysLib()
+    end
 end
 
 --[[
