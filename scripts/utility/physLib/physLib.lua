@@ -188,10 +188,11 @@ function ClosestPointsBetweenLines(A1, A2, B1, B2)
 
     local LineA = function(t)
         return A1 + (A2-A1) * t
+        return A1 + t * (A2-A1)
     end
 
     local LineB = function(t)
-        return B1 + (B2-B1) * t
+        return B1 + t * (B2-B1)
     end
 
     local DistanceSquared = function(s)
