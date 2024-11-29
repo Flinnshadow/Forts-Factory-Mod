@@ -73,8 +73,8 @@ ModuleCreationDefinitions = {
     end,
     ["constructor"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "IronPlate", {x = 0, y = 0})
+        newModule:AddInputBuffer(4, {["IronPlate"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
+        newModule:AddOutputBuffer(2, "Ammo", {x = 0, y = 0})
         newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
         newModule:SetRecipe({
             baseTime = 20,
@@ -104,11 +104,9 @@ function OnDeviceCompleted(teamId, deviceId, saveName)
 end
 
 function OnDeviceDestroyed(teamId, deviceId, saveName)
-    Log("saveName")
     DestroyModule(deviceId)
 end
 function OnDeviceDeleted(teamId, deviceId, saveName, nodeA, nodeB, t)
-    Log("saveName")
     DestroyModule(deviceId)
 end
 
