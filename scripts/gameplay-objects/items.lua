@@ -21,8 +21,8 @@ ItemDefinitions = {
 LinkDefinitions = {
     [""] =              {DynamicFriction = 4,       StaticFriction = 8,         ConveyorSpeed = 0},
     ["bracing"] =       {DynamicFriction = 1,       StaticFriction = 8,         ConveyorSpeed = 0},
-    ["armour"] =        {DynamicFriction = 0.05,    StaticFriction = 0,         ConveyorSpeed = 0},
-    ["door"] =          {DynamicFriction = 0.05,    StaticFriction = 8,         ConveyorSpeed = 0},
+    ["armour"] =        {DynamicFriction = 0.2,     StaticFriction = 8,         ConveyorSpeed = 0},
+    ["door"] =          {DynamicFriction = 0.2,     StaticFriction = 8,         ConveyorSpeed = 0},
     ["rope"] =          {DynamicFriction = 4,       StaticFriction = 8,         ConveyorSpeed = 0},
     ["fuse"] =          {DynamicFriction = 4,       StaticFriction = 8,         ConveyorSpeed = 0},
     ["shield"] =        {DynamicFriction = 0,       StaticFriction = 0,         ConveyorSpeed = 0},

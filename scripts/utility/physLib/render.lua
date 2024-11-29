@@ -15,10 +15,20 @@ function PhysLibRender.OnDraw()
         local effectId = Object.effectId
 
         local drawPos = Vec3Lerp(lastPos, pos, t)
+        if not Object.InterpolateThisFrame then drawPos = pos end
         SetEffectPosition(effectId, drawPos)
+    end
+end
+
+function PhysLibRender.BeforePhysicsUpdate()
+    for i = 1, #PhysicsObjects do
+        local Object = PhysicsObjects[i]
+        if not Object.InterpolateThisFrame then Object.InterpolateThisFrame = true end
     end
 end
 
 function PhysLibRender.PhysicsUpdate()
     PhysLibRender.LastFrameTime = GetRealTime()
+
 end
+

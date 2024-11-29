@@ -291,7 +291,7 @@ function CircleCollisionOnLinks(position, radius, node, results)
             local t = -distToNodeA / totalDist
             local posX, posY = nodeAX + linkX * t, nodeAY + linkY * t
 
-            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = posX, y = posY}, distance = dist, material = link.material, type = 1}
+            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = posX, y = posY}, distance = dist, material = link.material, type = 1, t = t}
             continue
         end
     end
