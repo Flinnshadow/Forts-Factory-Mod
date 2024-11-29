@@ -495,7 +495,7 @@ end
 function Module:GrabItemsAutomatically()
     for _, buffer in ipairs(self.inputBuffers) do
         if not buffer.inserterAttached then
-            for key, Object in pairs(PhysicsObjects) do
+            for key, Object in pairs(ItemObjects) do
                 local pos = Object.position
                 if buffer.hitbox:CheckCollision(pos) then
                     if buffer.itemTypes[Object.itemType] and #buffer.items < buffer.maxSize then

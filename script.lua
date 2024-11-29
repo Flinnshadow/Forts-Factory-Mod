@@ -19,8 +19,12 @@ end
 
 function Update(frame)
     UpdatePhysLib(frame)
-    UpdatePhysicsObjects()
+    UpdateItemObjects()
 
     UpdateModules()
 
+end
+
+function OnDraw()
+    PhysLibRender.OnDraw()
 end
