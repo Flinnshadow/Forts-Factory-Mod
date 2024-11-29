@@ -25,7 +25,7 @@ end
 
 Dot = 0
 function UpdatePhysLib(frame)
-   
+   PhysLibRender.BeforePhysicsUpdate()
     
     -- mod body update
     for i = 1, #Nodes do
