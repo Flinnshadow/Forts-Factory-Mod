@@ -106,9 +106,14 @@ function UpdateObjects()
 
 
             local noBackgroundResults = {}
+            local portalResults = {}
             for j = 1, #snapResults do
                 local snapResult = snapResults[j]
                 if snapResult.material == "backbracing" then
+                    continue
+                end
+                if snapResult.material == "portal" and snapResult.type == 1 then
+                    portalResults[#portalResults + 1] = snapResult
                     continue
                 end
                 noBackgroundResults[#noBackgroundResults + 1] = snapResult
@@ -117,6 +122,7 @@ function UpdateObjects()
             for j = 1, #noBackgroundResults do
                 local snapResult = noBackgroundResults[j]
                 if snapResult.type == 1 then
+                    
                     filteredResults[#filteredResults + 1] = snapResult
                 end
             end
@@ -174,8 +180,60 @@ function UpdateObjects()
                     Object.velocity = velocity - velocityParallelToSurface * parallel
                 end
             end
+            for j = 1, #portalResults do
+                Object.InterpolateThisFrame = false
+                local snapResult = portalResults[j]
+                
+                local nodeA = snapResult.nodeA
+                local nodeB = snapResult.nodeB
 
-            
+                local nodeIdA = nodeA.id
+                local nodeIdB = nodeB.id
+                
+                local destinationA = GetPortalDestinationA(nodeIdA, nodeIdB)
+                local destinationB = GetPortalDestinationB(nodeIdA, nodeIdB)
+
+
+                if destinationA == 0 then continue end
+                local destinationANode = NodesRaw[destinationA]
+                local destinationBNode = NodesRaw[destinationB]
+
+                local destinationLink = destinationBNode - destinationANode
+                local destinationLinkLength = destinationLink.length
+                local destinationLinkPerp = Vec3(destinationLink.y / destinationLinkLength, -destinationLink.x / destinationLinkLength, 0)
+                local destinationLinkParallel = Vec3(destinationLink.x / destinationLinkLength, destinationLink.y / destinationLinkLength, 0)
+
+                local originalPortalLink = nodeB - nodeA
+                local originalPortalLinkLength = originalPortalLink.length
+                local originalPortalLinkParallel = Vec3(originalPortalLink.x / originalPortalLinkLength, originalPortalLink.y / originalPortalLinkLength, 0)
+                local originalPortalLinkPerp = Vec3(originalPortalLinkParallel.y, -originalPortalLinkParallel.x, 0)
+
+                local portalSideSign = Vec2Dot(originalPortalLinkPerp, Object.pos - nodeA) > 0 and 1 or -1
+
+
+
+                local destinationPos = Vec3Lerp(destinationANode, destinationBNode, snapResult.t)
+                destinationPos = {x = destinationPos.x - destinationLinkPerp.x * (Object.radius + 0.01) * portalSideSign, y = destinationPos.y - destinationLinkPerp.y * (Object.radius + 0.01) * portalSideSign, z = 0}
+                Object.pos = destinationPos
+
+
+
+                local velocityParallel = Vec2Dot(velocity, originalPortalLinkParallel)
+                local velocityPerp = Vec2Dot(velocity, originalPortalLinkPerp)
+
+                local destinationVelocity = velocityParallel * destinationLinkParallel + velocityPerp * destinationLinkPerp
+                Object.velocity = destinationVelocity
+
+
+                local lerpPos = Vec3Lerp(destinationANode, destinationBNode, snapResult.t)
+                SpawnLine(destinationANode, destinationBNode, White(), 1)
+                SpawnLine(destinationANode, lerpPos + 100 * destinationLinkPerp, White(), 1)
+                SpawnLine(destinationBNode, lerpPos + 100 * destinationLinkPerp, White(), 1)
+
+                SpawnLine(lerpPos, lerpPos + 100 * destinationLinkPerp, White(), 1)
+
+                break -- only do one portal per frame
+            end
         end
         --SpawnCircle(Object.pos, Object.radius, White(), 0.06)
     end
