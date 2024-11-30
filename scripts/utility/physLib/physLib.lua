@@ -1,3 +1,6 @@
+--scripts/utility/physLib/physLib.lua
+
+
 --#region Includes
 dofile("scripts/forts.lua")
 
@@ -13,6 +16,8 @@ NodesRaw = {}
 Nodes = {}
 NodeTree = {}
 
+Links = {}
+LinksTree = {}
 --#endregion
 
 
@@ -22,7 +27,7 @@ NodeTree = {}
 --#region Capsule collision
 function CapsuleCollisionOnStructure(posA, posB, radius)
     local results = {}
-    CapsuleCollisionsOnBranch(posA, posB, radius, NodeTree, results)
+    CapsuleCollisionsOnBranch(posA, posB, radius, LinksTree, results)
     return results
 end
 function CapsuleCollisionOnObjects(posA, posB, radius)
@@ -42,13 +47,8 @@ function CapsuleCollisionsOnBranch(posA, posB, radius, branch, results)
         return
     end
 
-    local ax = posA.x
-    local ay = posA.y
-    local bx = posB.x
-    local by = posB.y
 
-    local rect = branch.rect
-    HighlightExtents(rect, 0.06, Red())
+    --HighlightExtents(rect, 0.06, Red())
     local children = branch.children
     for i = 1, #children do
         local child = children[i]
@@ -170,76 +170,106 @@ function ClosestPointOnLineSegment(A, B, point)
     return {x = A.x + t * ABX, y = A.y + t * ABY}
 end
 
+local reusedCandidates = {-1, -1, 1, -1, -1, 1, 0, -1, -1, 0, 0, 0, 0, 1, 1, 0, 1, 1}
+local reusedFilteredList = {}
 function ClosestPointsBetweenLines(A1, A2, B1, B2)
-    local t1 = -(Vec3Dot(A1-B1, A2-A1) * Vec3Dot(B2-B1, B2-B1) - Vec3Dot(A1-B1, B2-B1) * Vec3Dot(A2-A1, B2-B1)) / (Vec2Cross(A2-A1, B2-B1) * Vec2Cross(A2-A1, B2-B1))
-    local t2 = (Vec3Dot(A1-B1, A2-A1) + Vec3Dot(A2-A1, A2-A1) * t1) / Vec3Dot(B2-B1, A2-A1)
-    local t3 = Vec3Dot(A2-B1, B2-B1) / Vec3Dot(B2-B1, B2-B1)
-    local t4 = Vec3Dot(B2-A1, A2-A1) / Vec3Dot(A2-A1, A2-A1)
-    local t5 = Vec3Dot(A1-B1, B2-B1) / Vec3Dot(B2-B1, B2-B1)
-    local t6 = Vec3Dot(B1-A1, A2-A1) / Vec3Dot(A2-A1, A2-A1)
-    
-    local candidates = {{t1, t2}, {1, t3}, {t4, 1}, {0, t5}, {t6, 0}, {0, 0}, {0, 1}, {1, 0}, {1, 1}}
-    local filteredList = {}
 
-    for i = 1, #candidates do
-        if 0 <= candidates[i][1] and candidates[i][1] <= 1 and 0 <= candidates[i][2] and candidates[i][2] <= 1 then
-            filteredList[#filteredList + 1] = candidates[i]
+    local candidates = reusedCandidates
+    local filteredList = reusedFilteredList
+    local A1x, A1y, A2x, A2y, B1x, B1y, B2x, B2y = A1.x, A1.y, A2.x, A2.y, B1.x, B1.y, B2.x, B2.y
+
+    local A1SubB1x, A1SubB1y = A1x - B1x, A1y - B1y
+    local A2SubA1x, A2SubA1y = A2x - A1x, A2y - A1y
+    local A2SubB1x, A2SubB1y = A2x - B1x, A2y - B1y
+    local B1SubA1x, B1SubA1y = B1x - A1x, B1y - A1y
+    local B2SubA1x, B2SubA1y = B2x - A1x, B2y - A1y
+    local B2SubB1x, B2SubB1y = B2x - B1x, B2y - B1y
+    
+    local A1SubB1DotA2SubA1 = A1SubB1x * A2SubA1x + A1SubB1y * A2SubA1y
+    local B2SubB1Squared = B2SubB1x * B2SubB1x + B2SubB1y * B2SubB1y
+    local A1SubB1DotB2SubB1 = A1SubB1x * B2SubB1x + A1SubB1y * B2SubB1y
+    local AtSubA1DotB2SubB1 = A2SubA1x * B2SubB1x + A2SubA1y * B2SubB1y
+    local A2SubA1CrossB2SubB1 = A2SubA1x * B2SubB1y - A2SubA1y * B2SubB1x
+    local A2SubA1Squared = A2SubA1x * A2SubA1x + A2SubA1y * A2SubA1y
+    local B2SubB1DotA2SubA1 = B2SubB1x * A2SubA1x + B2SubB1y * A2SubA1y
+    local A2SubB1DotB2SubB1 = A2SubB1x * B2SubB1x + A2SubB1y * B2SubB1y
+    local B2SubA1DotA2SubA1 = B2SubA1x * A2SubA1x + B2SubA1y * A2SubA1y
+    local B1SubA1DotA2SubA1 = B1SubA1x * A2SubA1x + B1SubA1y * A2SubA1y
+
+
+
+    local t1 = -(A1SubB1DotA2SubA1 * B2SubB1Squared - A1SubB1DotB2SubB1 * AtSubA1DotB2SubB1) / (A2SubA1CrossB2SubB1 * A2SubA1CrossB2SubB1)
+    local t2 = (A1SubB1DotA2SubA1 + A2SubA1Squared * t1) / B2SubB1DotA2SubA1
+    local t3 = A2SubB1DotB2SubB1 / B2SubB1Squared
+    local t4 = B2SubA1DotA2SubA1 / A2SubA1Squared
+    local t5 = A1SubB1DotB2SubB1 / B2SubB1Squared
+    local t6 = B1SubA1DotA2SubA1 / A2SubA1Squared
+    candidates[1] = t1
+    candidates[2] = t2
+    candidates[4] = t3
+    candidates[5] = t4
+    candidates[8] = t5
+    candidates[9] = t6
+    
+    
+    local candidateCount = 18
+    local filteredListCount = 1
+    for i = 1, candidateCount, 2 do
+        if 0 <= candidates[i] and candidates[i] <= 1 and 0 <= candidates[i + 1] and candidates[i + 1] <= 1 then
+            filteredList[filteredListCount] = candidates[i]
+            filteredList[filteredListCount + 1] = candidates[i + 1]
+            filteredListCount = filteredListCount + 2
         end
     end
 
-    local LineA = function(t)
-        return A1 + t * (A2-A1)
-    end
 
-    local LineB = function(t)
-        return B1 + t * (B2-B1)
-    end
+    local bestCandidate1 = filteredList[1]
+    local bestCandidate2 = filteredList[2]
+    local distanceX = (A1x + bestCandidate1 * A2SubA1x) - (B1x + bestCandidate2 * B2SubB1x)
+    local distanceY = (A1y + bestCandidate1 * A2SubA1y) - (B1y + bestCandidate2 * B2SubB1y)
+    local bestDistance = distanceX * distanceX + distanceY * distanceY
 
-    local DistanceSquared = function(s)
-        local distance = LineA(s[1]) - LineB(s[2])
-        return Vec3Dot(distance, distance)
-    end 
+    for i = 3, filteredListCount - 1, 2 do
+        local candidate1 = filteredList[i]
+        local candidate2 = filteredList[i + 1]
+        local distanceX = (A1x + candidate1 * A2SubA1x) - (B1x + candidate2 * B2SubB1x)
+        local distanceY = (A1y + candidate1 * A2SubA1y) - (B1y + candidate2 * B2SubB1y)
 
-    local bestCandidate = filteredList[1]
-    local bestDistance = DistanceSquared(bestCandidate)
 
-    for i = 2, #filteredList do
-        local candidate = filteredList[i]
-        local distance = DistanceSquared(candidate)
+        local distance = distanceX * distanceX + distanceY * distanceY 
 
         if distance < bestDistance then
-            bestCandidate = candidate
+            bestCandidate1 = candidate1
+            bestCandidate2 = candidate2
             bestDistance = distance
         end
     end
-    return LineA(bestCandidate[1]), LineB(bestCandidate[2]), bestDistance
+    local returnPosA = {x = A1x + bestCandidate1 * A2SubA1x, y = A1y + bestCandidate1 * A2SubA1y}
+    local returnPosB = {x = B1x + bestCandidate2 * B2SubB1x, y = B1y + bestCandidate2 * B2SubB1y}
+    return returnPosA, bestCandidate1, returnPosB, bestCandidate2, bestDistance
 end
 
-function CapsuleCollisionOnLinks(posA, posB, radius, node, results)
-    for _, link in pairs(node.links) do
-        local nodeA = node
-        local nodeB = link.node
-        
-        local linkX, linkY = nodeB.x - nodeA.x, nodeB.y - nodeA.y
+function CapsuleCollisionOnLinks(posA, posB, radius, link, results)
+    local nodeA = link.nodeA
+    local nodeB = link.nodeB
 
-        local capsuleX, capsuleY = posB.x - posA.x, posB.y - posA.y
-
-        local closestPointLink, closestPointCapsule = ClosestPointsBetweenLines(posA, posB, nodeA, nodeB)
-
-        SpawnCircle(closestPointCapsule, radius, Red(), 0.06)
-        SpawnCircle(closestPointLink, radius, Blue(), 0.06)
-        SpawnLine(closestPointCapsule, closestPointLink, White(), 0.06)
-    end
+    local closestPointCapsule, closestPointCapsuleTime,
+    closestPointLink, closestPointLinkTime,
+    closestDistance = ClosestPointsBetweenLines(posA, posB, nodeA, nodeB)
+    if closestDistance > radius * radius then return end
+    CircleCollisionOnLink(closestPointCapsule, radius, nodeA, nodeB, link, results, closestPointCapsuleTime)
 end
 --#endregion
 
 --#region Utility
-function GetNodeRectangle(nodes)
+function GetLinkRectangle(nodes)
     local huge = math.huge
     local count = #nodes
     local minX, minY, maxX, maxY = huge, huge, -huge, -huge
     local averageX, averageY = 0, 0
 
+    local boundCheckInterval = 10
+    local boundCheckCounter = 9
 
     for i = 1, count do
         local v = nodes[i]
@@ -249,12 +279,16 @@ function GetNodeRectangle(nodes)
         averageX = averageX + x
         averageY = averageY + y
 
-        -- Update bounds
-        minX = (x < minX) and x or minX
-        maxX = (x > maxX) and x or maxX
+        boundCheckCounter = boundCheckCounter + 1
+        if boundCheckCounter == boundCheckInterval then
+            boundCheckCounter = 0
+            -- Update bounds
+            minX = (x < minX) and x or minX
+            maxX = (x > maxX) and x or maxX
 
-        minY = (y < minY) and y or minY
-        maxY = (y > maxY) and y or maxY
+            minY = (y < minY) and y or minY
+            maxY = (y > maxY) and y or maxY
+        end
     end
 
 
@@ -355,11 +389,13 @@ end
 function HighlightCapsule(posA, posB, radius)
     SpawnCircle(posA, radius, White(), 0.06)
     SpawnCircle(posB, radius, White(), 0.06)
-    local lineUnit = Vec2Normalize(posB - posA)
+    local lineUnit = Vec2Normalize({ x = posB.x - posA.x, y = posB.y - posA.y})
     local linePerp = Vec2Perp(lineUnit)
     linePerp = Vec3(linePerp.x, linePerp.y, 0)
-    SpawnLine(posA + radius * linePerp, posB + radius * linePerp, White(), 0.06)
-    SpawnLine(posA - radius * linePerp, posB - radius * linePerp, White(), 0.06)
+
+    
+    SpawnLine({x = posA.x + radius * linePerp.x, y = posA.y + radius * linePerp.y}, {x = posB.x + radius * linePerp.x, y = posB.y + radius * linePerp.y}, White(), 0.06)
+    SpawnLine({x = posA.x - radius * linePerp.x, y = posA.y - radius * linePerp.y}, {x = posB.x - radius * linePerp.x, y = posB.y - radius * linePerp.y}, White(), 0.06)
 
 end
 
