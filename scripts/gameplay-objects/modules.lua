@@ -496,7 +496,7 @@ function Module:GrabItemsAutomatically()
     for _, buffer in ipairs(self.inputBuffers) do
         if not buffer.inserterAttached then
             for key, Object in pairs(ItemObjects) do
-                local pos = Object.position
+                local pos = Object.pos
                 if buffer.hitbox:CheckCollision(pos) then
                     if buffer.itemTypes[Object.itemType] and #buffer.items < buffer.maxSize then
                         -- Find connected inserter
@@ -759,8 +759,8 @@ function RotatePoint(x, y, angle)
 end
 
 function OnKey(key, down)
-    if key == "u" and down then
-        CreateItem(ProcessedMousePos(),"IronOre")
+    if key == "u" then
+        SpawnItems = down
     end
     if key == "i" and down then
         CreateItem(ProcessedMousePos(),"apple")

@@ -70,7 +70,7 @@ function CreateItem(pos, iType, effectId)
     Obj.itemType = iType
     Obj.id = GlobalItemIterator
     ItemObjects[GlobalItemIterator] = Obj
-    ScheduleCall(10, DestroyItem, Obj, GlobalItemIterator)
+    ScheduleCall(300, DestroyItem, Obj, GlobalItemIterator)
     return Obj
 end
 

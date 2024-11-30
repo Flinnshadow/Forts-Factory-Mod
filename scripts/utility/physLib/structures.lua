@@ -12,6 +12,8 @@ function c(idA, idB)
         nodeA = p
         nodeA.links = {}
         nodeA.id = idA
+        nodeA.GetVelocity = function() if nodeA.velocity then return nodeA.velocity else nodeA.velocity = NodeVelocity(idA) return nodeA.velocity end end
+
         NodesRaw[idA] = nodeA
     end
     if not nodeB then
@@ -19,6 +21,7 @@ function c(idA, idB)
         nodeB = p
         nodeB.links = {}
         nodeB.id = idB
+        nodeB.GetVelocity = function() if nodeB.velocity then return nodeB.velocity else nodeB.velocity = NodeVelocity(idB) return nodeB.velocity end end
         NodesRaw[idB] = nodeB
     end
     local saveName = GetLinkMaterialSaveName(idA, idB)
@@ -253,20 +256,20 @@ function CircleCollisionOnLinks(position, radius, node, results)
             local posToNodeASquaredX = posToNodeAX * posToNodeAX
             local posToNodeASquaredY = posToNodeAY * posToNodeAY
             if posToNodeASquaredX + posToNodeASquaredY > radius * radius then continue end
-            local dist = -math.sqrt(posToNodeASquaredX + posToNodeASquaredY)
+            local dist = math.sqrt(posToNodeASquaredX + posToNodeASquaredY)
             local linkNormalX = posToNodeAX / dist
             local linkNormalY = posToNodeAY / dist
-            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = nodeA.x, y = nodeA.y}, distance = dist, material = link.material, type = 2}
+            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = nodeA.x, y = nodeA.y}, distance = dist, material = link.material, type = 2, t = 0}
             continue
         end
         if (crossDistToNodeB < 0) then
             local posToNodeBSquaredX = posToNodeBX * posToNodeBX
             local posToNodeBSquaredY = posToNodeBY * posToNodeBY
             if posToNodeBSquaredX + posToNodeBSquaredY > radius * radius then continue end
-            local dist = -math.sqrt(posToNodeBSquaredX + posToNodeBSquaredY)
+            local dist = math.sqrt(posToNodeBSquaredX + posToNodeBSquaredY)
             local linkNormalX = posToNodeBX / dist
             local linkNormalY = posToNodeBY / dist
-            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = nodeB.x, y = nodeB.y}, distance = dist, material = link.material, type = 2}
+            results[#results + 1] = {nodeA = nodeA, nodeB = nodeB, normal = {x = linkNormalX, y = linkNormalY}, pos = {x = nodeB.x, y = nodeB.y}, distance = dist, material = link.material, type = 2, t = 1}
             continue
         end
         

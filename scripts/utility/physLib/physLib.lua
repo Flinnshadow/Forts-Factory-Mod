@@ -25,6 +25,10 @@ function CapsuleCollisionOnStructure(posA, posB, radius)
     CapsuleCollisionsOnBranch(posA, posB, radius, NodeTree, results)
     return results
 end
+function CapsuleCollisionOnObjects(posA, posB, radius)
+    local results = {}
+    CapsuleCollisionsOnBranch(posA, posB, radius, ObjectCastTree, results)
+end
 function CapsuleCollisionsOnBranch(posA, posB, radius, branch, results)
     if not branch then return end
     if branch.deepest then

@@ -11,7 +11,7 @@ function PhysLibRender.OnDraw()
     for i = 1, #PhysicsObjects do
         local Object = PhysicsObjects[i]
         local pos = Object.pos
-        local lastPos = Object.lastPos
+        local lastPos = Object.lastFramePos
         local effectId = Object.effectId
 
         local drawPos = Vec3Lerp(lastPos, pos, t)

@@ -1,4 +1,5 @@
 local maxPhysicsStep = 8
+local minimumVelocityPerSecond = 1
 
 
 local defaultObjectDefinition = {
@@ -18,7 +19,7 @@ function UpdatePhysicsObjects()
     local worldExtents = GetWorldExtents()
     local extents = {minX = worldExtents.MinX, minY = worldExtents.MinY, maxX = worldExtents.MaxX, maxY = worldExtents.MaxY}
     PhysicsObjectsTree = SubdividePoses(PhysicsObjects, extents)
-    UpdateObjects()
+    ProcessPhysicsObjects()
 
 end
 
@@ -33,16 +34,18 @@ function RegisterPhysicsObject(pos, radius, velocity, objectDefinition, effectId
         radius = radius,
         velocity = velocity,
         objectDefinition = objectDefinition,
-        lastPos = pos,
+        lastFramePos = pos,
         effectId = effectId
     }
     PhysicsObjects[#PhysicsObjects + 1] = Object
+    BetterLog(#PhysicsObjects)
     return Object
 end
 function UnregisterPhysicsObject(Object)
     for i = 1, #PhysicsObjects do
         if PhysicsObjects[i] == Object then
             table.remove(PhysicsObjects, i)
+            BetterLog(#PhysicsObjects)
             return
         end
     end
@@ -50,10 +53,10 @@ end
 
 
 
-function UpdateObjects()
+function ProcessPhysicsObjects()
     for i = 1, #PhysicsObjects do
         local Object = PhysicsObjects[i]
-        Object.lastPos = Object.pos
+        Object.lastFramePos = Object.pos
     end
 
     for i = 1, #PhysicsObjects do
@@ -61,7 +64,6 @@ function UpdateObjects()
         local velocity = Object.velocity
         local radius = Object.radius
         local physicsStep = math.clamp(math.ceil((Vec2Mag(velocity) * data.updateDelta) / (radius)), 1, maxPhysicsStep)
-
         local delta = data.updateDelta / physicsStep
         -- Physics steps
         for k = 1, physicsStep do
@@ -101,7 +103,7 @@ function UpdateObjects()
             end
 
 
-            -- Structure
+            -- Structure filtering
             local snapResults = CircleCollisionOnStructure(Object.pos, Object.radius)
 
 
@@ -129,45 +131,67 @@ function UpdateObjects()
             if #filteredResults == 0 then
                 filteredResults = noBackgroundResults
             end
+            local lastFramePos = Object.lastFramePos
 
+
+
+
+
+
+
+
+            -- Structure
             for j = 1, #filteredResults do
+                
+                -- Snap result
                 local snapResult = filteredResults[j]
+
                 local materialSaveName = snapResult.material
+                local snapResultPos = snapResult.pos
+                local snapResultNormal = snapResult.normal
+                local snapResultDistance = snapResult.distance
+                local nodeA = snapResult.nodeA
+                local nodeB = snapResult.nodeB
+                local t = snapResult.t
 
+                -- object
+                local objectPos = Object.pos
+                local objectRadius = Object.radius
+
+                -- Definitions
                 local linkDefinition = LinkDefinitions[materialSaveName]
-                local normal = Vec3(snapResult.normal.x, snapResult.normal.y, 0)
-                local platformVelocity = Vec2Average({ NodeVelocity(snapResult.nodeA.id), NodeVelocity(snapResult.nodeB
-                    .id) })
-                -- Perform collision in the frame of reference of the object that it is colliding with
+                local objectDefinition = Object.objectDefinition
+
+
+                local normal = Vec3(snapResultNormal.x, snapResultNormal.y, 0)
+                
+                -- Keep the normal from the previous frame to help reduce clipping
+                local lastFramePosToSnapPos = {x = snapResultPos.x - lastFramePos.x, y = snapResultPos.y - lastFramePos.y}
+                local platformVelocity = Vec3Lerp(NodeVelocity(nodeA.id), NodeVelocity(nodeB.id), t)
                 local parallel = Vec3(normal.y, -normal.x, 0)
+                normal = Vec2Dot(lastFramePosToSnapPos, normal) > 0 and -normal or normal
+
+                -- Apply conveyor frame of reference shift
                 velocity = velocity - platformVelocity + linkDefinition.ConveyorSpeed * parallel
-
-
-
-                -- Helper vectors
-                local objPos = Object.pos
-                local error = Vec3(objPos.x - snapResult.pos.x, objPos.y - snapResult.pos.y)
-                local length = error.length
-                if (length == 0) then
-                    continue
-                end
-                local errorNormalized = Vec3(error.x / length, error.y / length)
-                error = (Object.radius - length) * errorNormalized
 
 
 
                 local velocityPerpToSurface = Vec2Dot(velocity, normal)
                 local velocityParallelToSurface = Vec2Dot(velocity, parallel)
+                
+                
+                local error = objectRadius - snapResultDistance
+
 
                 -- Rigid force
-                Object.pos = Object.pos + error
-                Object.velocity = velocity - velocityPerpToSurface * normal
-                velocity = Object.velocity
+                objectPos.x = objectPos.x + error * normal.x
+                objectPos.y = objectPos.y + error * normal.y
+                velocity = velocity - velocityPerpToSurface * normal
 
                 local gravityFriction = -gravity * normal.y / 1000
                 -- Dynamic friction
                 local force = -
-                defaultObjectDefinition.DynamicFriction * linkDefinition.DynamicFriction * gravityFriction * velocityParallelToSurface *
+                objectDefinition.DynamicFriction * linkDefinition.DynamicFriction * gravityFriction * velocityParallelToSurface *
                 parallel
                 velocity = velocity + delta * force
                 -- Return back to world frame
@@ -176,10 +200,17 @@ function UpdateObjects()
                 Object.velocity = velocity
 
                 -- Static friction
-                if (math.abs(velocityParallelToSurface) < (defaultObjectDefinition.StaticFriction * linkDefinition.StaticFriction * gravityFriction)) then
+                if (math.abs(velocityParallelToSurface) < (objectDefinition.StaticFriction * linkDefinition.StaticFriction * gravityFriction)) then
                     Object.velocity = velocity - velocityParallelToSurface * parallel
                 end
             end
+
+
+
+
+
+
+            -- Portals
             for j = 1, #portalResults do
                 Object.InterpolateThisFrame = false
                 local snapResult = portalResults[j]
@@ -223,17 +254,13 @@ function UpdateObjects()
 
                 local destinationVelocity = velocityParallel * destinationLinkParallel + velocityPerp * destinationLinkPerp
                 Object.velocity = destinationVelocity
-
-
-                local lerpPos = Vec3Lerp(destinationANode, destinationBNode, snapResult.t)
-                SpawnLine(destinationANode, destinationBNode, White(), 1)
-                SpawnLine(destinationANode, lerpPos + 100 * destinationLinkPerp, White(), 1)
-                SpawnLine(destinationBNode, lerpPos + 100 * destinationLinkPerp, White(), 1)
-
-                SpawnLine(lerpPos, lerpPos + 100 * destinationLinkPerp, White(), 1)
-
                 break -- only do one portal per frame
             end
+
+            -- local objectVelocity = Object.velocity
+            -- if objectVelocity.x * objectVelocity.x + objectVelocity.y * objectVelocity.y * delta < minimumVelocityPerSecond * minimumVelocityPerSecond then
+            --     Object.velocity = Vec3(0, 0, 0)
+            -- end
         end
         --SpawnCircle(Object.pos, Object.radius, White(), 0.06)
     end
@@ -292,10 +319,19 @@ function TestObjectOnObjectCollision(branch, object, results)
             local other = branch.children[i]
 
             if other == object then continue end
+            local otherObjectPos = other.pos
+            local objectPos = object.pos
+            local otherPosX = otherObjectPos.x
+            local otherPosY = otherObjectPos.y
+            local objectPosX = objectPos.x
+            local objectPosY = objectPos.y
 
-            local posAtoPosB = other.pos - object.pos
-            local distSquared = posAtoPosB.x * posAtoPosB.x + posAtoPosB.y * posAtoPosB.y
-            local combinedRadius = object.radius + other.radius
+            local objectRadius = object.radius
+            local otherRadius = other.radius
+
+            local posAToPosBX, posAToPosBY = otherPosX - objectPosX, otherPosY - objectPosY
+            local distSquared = posAToPosBX * posAToPosBX + posAToPosBY * posAToPosBY
+            local combinedRadius = objectRadius + otherRadius
             combinedRadius = combinedRadius * combinedRadius
             if distSquared < combinedRadius then
                 results[#results + 1] = other
@@ -303,28 +339,33 @@ function TestObjectOnObjectCollision(branch, object, results)
         end
         return
     end
-    local x = object.pos.x
-    local y = object.pos.y
+    local pos = object.pos
+    local x = pos.x
+    local y = pos.y
     local radius = object.radius
 
     local center = branch.rect.center
-
+    local centerX = center.x
+    local centerY = center.y
     local subTrees = branch.children
-    if x < center.x + radius + MaxRadius then
-        if y < center.y + radius + MaxRadius then
+    if x < centerX + radius + MaxRadius then
+        if y < centerY + radius + MaxRadius then
             TestObjectOnObjectCollision(subTrees[1], object, results)
         end
-        if y > center.y - radius - MaxRadius then
+        if y > centerY - radius - MaxRadius then
             TestObjectOnObjectCollision(subTrees[2], object, results)
         end
     end
-    if x > center.x - radius - MaxRadius then
-        if y < center.y + radius + MaxRadius then
+    if x > centerX - radius - MaxRadius then
+        if y < centerY + radius + MaxRadius then
             TestObjectOnObjectCollision(subTrees[3], object, results)
         end
-        if y > center.y - radius - MaxRadius then
+        if y > centerY - radius - MaxRadius then
             TestObjectOnObjectCollision(subTrees[4], object, results)
         end
     end
 
 end
+
+
+

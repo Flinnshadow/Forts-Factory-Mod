@@ -54,6 +54,7 @@ function OnNodeCreated(nodeId, teamId, pos, foundation, selectable, extrusion)
     -- Just assign pos since we're using the x and y directly from that
     pos.links = {}
     pos.id = nodeId
+    pos.GetVelocity = function() if pos.velocity then return pos.velocity else pos.velocity = NodeVelocity(nodeId) return pos.velocity end end
     NodesRaw[nodeId] = pos
     UpdateNodeTable()
 end
@@ -83,10 +84,12 @@ function OnNodeBroken(thisNodeId, nodeIdNew)
     local nodeA = NodePosition(thisNodeId)
     nodeA.links = {}
     nodeA.id = thisNodeId
+    nodeA.GetVelocity = function() if nodeA.velocity then return nodeA.velocity else nodeA.velocity = NodeVelocity(thisNodeId) return nodeA.velocity end end
     NodesRaw[thisNodeId] = nodeA
     local nodeB = NodePosition(nodeIdNew)
     nodeB.links = {}
     nodeB.id = nodeIdNew
+    nodeB.GetVelocity = function() if nodeB.velocity then return nodeB.velocity else nodeB.velocity = NodeVelocity(nodeIdNew) return nodeB.velocity end end
     NodesRaw[nodeIdNew] = nodeB
     -- Step 4, recursively readd links to the nodes
     AddLinksRecursive(thisNodeId)

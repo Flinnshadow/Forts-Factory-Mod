@@ -22,7 +22,10 @@ function Update(frame)
     UpdateItemObjects()
 
     UpdateModules()
+    if SpawnItems then
 
+    CreateItem(ProcessedMousePos(),"IronOre")
+    end
 end
 
 function OnDraw()

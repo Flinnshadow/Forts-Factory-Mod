@@ -66,10 +66,11 @@ function ModuleInputHitboxPositionUpdate()
     end
 end
 
+SpawnItems = false
 --ContainItem()
 function OnKey(key, down)
-    if key == "u" and down then
-        CreateItem(ProcessedMousePos(),"apple")
+    if key == "u" then
+        SpawnItems = down
     end
 end
 
