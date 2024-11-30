@@ -26,7 +26,7 @@ end
 
 function RegisterPhysicsObject(pos, radius, velocity, objectDefinition, effectId)
     pos = pos or Vec3(0, 0, 0)
-    radius = radius or 50 / 2
+    radius = radius or (50 / 2)
     velocity = velocity or Vec3(0, 0, 0)
     objectDefinition = objectDefinition or defaultObjectDefinition
     local Object = {
@@ -69,7 +69,7 @@ function ProcessPhysicsObjects()
         for k = 1, physicsStep do
             -- Euler integration
             Object.pos = Object.pos + (delta * 0.5 * Object.velocity)
-            Object.velocity.y = Object.velocity.y + gravity * delta
+            Object.velocity.y = Object.velocity.y + Gravity * delta
             Object.pos = Object.pos + (delta * 0.5 * Object.velocity)
             --SpawnCircle(Object.pos, Object.radius, Red(), 0.06)
 
@@ -167,7 +167,7 @@ function ProcessPhysicsObjects()
                 
                 -- Keep the normal from the previous frame to help reduce clipping
                 local lastFramePosToSnapPos = {x = snapResultPos.x - lastFramePos.x, y = snapResultPos.y - lastFramePos.y}
-                local platformVelocity = Vec3Lerp(NodeVelocity(nodeA.id), NodeVelocity(nodeB.id), t)
+                local platformVelocity = Vec2Lerp(NodeVelocity(nodeA.id), NodeVelocity(nodeB.id), t)
                 local parallel = Vec3(normal.y, -normal.x, 0)
                 normal = Vec2Dot(lastFramePosToSnapPos, normal) > 0 and -normal or normal
 
@@ -188,7 +188,7 @@ function ProcessPhysicsObjects()
                 objectPos.y = objectPos.y + error * normal.y
                 velocity = velocity - velocityPerpToSurface * normal
 
-                local gravityFriction = -gravity * normal.y / 1000
+                local gravityFriction = -Gravity * normal.y / 1000
                 -- Dynamic friction
                 local force = -
                 objectDefinition.DynamicFriction * linkDefinition.DynamicFriction * gravityFriction * velocityParallelToSurface *
@@ -243,7 +243,7 @@ function ProcessPhysicsObjects()
 
 
 
-                local destinationPos = Vec3Lerp(destinationANode, destinationBNode, snapResult.t)
+                local destinationPos = Vec2Lerp(destinationANode, destinationBNode, snapResult.t)
                 destinationPos = {x = destinationPos.x - destinationLinkPerp.x * (Object.radius + 0.01) * portalSideSign, y = destinationPos.y - destinationLinkPerp.y * (Object.radius + 0.01) * portalSideSign, z = 0}
                 Object.pos = destinationPos
 

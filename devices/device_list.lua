@@ -1,5 +1,5 @@
 
-mine = FindDevice("mine")
+local mine = FindDevice("mine")
 if mine then
     mine.MetalCost = mine.MetalCost - 50 --Reduced cost due to the requirement of belts and the reduced income before smelting
     mine.EnergyCost = mine.EnergyCost - 500

@@ -33,12 +33,13 @@ end
 
 
 function Vec2Average(vectors)
-    local average = Vec3(0,0)
+    local averageX, averageY = 0, 0
     for _, vector in pairs(vectors) do
 
-        average = average + vector
+        averageX = averageX + vector.x
+        averageY = averageY + vector.y
     end
-    return Vec3(average.x / #vectors, average.y / #vectors)
+    return Vec3(averageX / #vectors, averageY / #vectors)
 end
 
 function Vec2Mag(v)
@@ -148,11 +149,16 @@ local VectorMembers = {
 
 --Vanilla Vec3 expansion, made by AlexD
 
-
+---@class Vector3D
+---@field x number
+---@field y number
+---@field z number
+---@field [any] any
 
 -- Metatable implementing operators using metafunctions
 -- All member functions are implemented via the __index metafunction
 ---@class Vec3
+---@field [any] any
 VectorMetatable = {
         -- Implements member functions, called when a nil item *would*
     -- be accessed in the tables dictionary, instead gives return value. 
@@ -268,6 +274,13 @@ function Vec3Lerp(vec1, vec2, t)
         vec1.x + (vec2.x - vec1.x) * t,
         vec1.y + (vec2.y - vec1.y) * t,
         vec1.z + (vec2.z - vec1.z) * t
+    )
+end
+
+function Vec2Lerp(vec1, vec2, t)
+    return Vec3(
+        vec1.x + (vec2.x - vec1.x) * t,
+        vec1.y + (vec2.y - vec1.y) * t
     )
 end
 

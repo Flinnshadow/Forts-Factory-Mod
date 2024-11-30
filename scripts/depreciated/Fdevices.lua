@@ -77,7 +77,7 @@ end
 function SpawnMetal(deviceId)
     if DeviceExists(deviceId) then
         --Find Output
-        pos = GetDevicePosition(deviceId) - Vec3(0, 130)
+        local pos = GetDevicePosition(deviceId) - Vec3(0, 130)
         CreateItem(pos,"IronOre")
         ScheduleCall(16, SpawnMetal, deviceId) --a mine would have yielded 64 metal, each ore is 50, metal plates are 124 (64 per ore)
         -- if debug then BetterLog(GlobalItemIterator) end

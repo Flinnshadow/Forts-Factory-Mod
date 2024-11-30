@@ -1,8 +1,6 @@
 -- Constants and Globals
-gravity = 0
+Gravity = 0
 GlobalItemIterator = 0
-local CONVEYOR_SPEED = 120
-local MAX_PHYSICS_STEP = 8
 
 -- Item Definitions
 ItemDefinitions = {

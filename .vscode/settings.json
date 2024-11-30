@@ -1,5 +1,34 @@
 {
     "Lua.workspace.library": [
-        "c:\\Users\\Flinn\\.vscode\\extensions\\tretinv3.forts-api-extention-0.3.0\\fortsAPI"
+        "c:\\Users\\Flinn\\.vscode\\extensions\\tretinv3.forts-api-extention-0.3.0\\fortsAPI",
+        "/home/deltawing/.vscode/extensions/tretinv3.forts-api-extention-0.3.0/fortsAPI"
+    ],
+    "Lua.diagnostics.globals": [
+        "L",
+        "Device",
+        "path",
+        "FindDevice",
+        "VALIDITYFLAG_REQUIRES_ABOVE_WATER",
+        "StandardDeviceSmokeEmitter",
+        "DeepCopy",
+        "FindMaterial",
+        "Material",
+        "BracingPlates",
+        "ScheduleCall",
+        "GetRealTime",
+        "data",
+        "White",
+        "Value",
+        "SnapToWorld",
+        "SNAP_DEVICES",
+        "Colour",
+        "Vec3Length",
+        "FindFunctionName"
+    ],
+    "Lua.codeLens.enable": true,
+    "Lua.hint.semicolon": "All",
+    "Lua.runtime.version": "Lua 5.1",
+    "Lua.runtime.nonstandardSymbol": [
+        "continue"
     ]
 }

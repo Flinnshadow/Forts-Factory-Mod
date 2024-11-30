@@ -1,4 +1,4 @@
-
+--scripts/utility/physLib/entrypoints.lua
 
 function LoadPhysLib()
     NodesRaw = {}
@@ -15,31 +15,48 @@ function ReloadPhysLib()
     NodesRaw = {}
     Nodes = {}
     NodeTree = {}
-
+    local startTime = GetRealTime()
     EnumerateStructureLinks(0, -1, "c", true)
     EnumerateStructureLinks(1, -1, "c", true)
     EnumerateStructureLinks(2, -1, "c", true)
+
+    local endTime = GetRealTime()
+    BetterLog("Time taken: " .. (endTime - startTime) * 1000 .. "ms")
     UpdateNodeTable()
 end
 
 
 Dot = 0
 function UpdatePhysLib(frame)
-   PhysLibRender.BeforePhysicsUpdate()
-    
+    local startTime = GetRealTime()
+    PhysLibRender.BeforePhysicsUpdate()
+
     -- mod body update
-    for i = 1, #Nodes do
-        local node = Nodes[i]
+    local nodes = Nodes
+    local nodeCount = #nodes
+    for i = 1, nodeCount do
+        local node = nodes[i]
         local newPos = NodePosition(node.id)
         node.x = newPos.x
         node.y = newPos.y
     end
 
+     -- Update links positions etc
+     Links = {}
+     EnumerateStructureLinks(0, -1, "d", true)
+     EnumerateStructureLinks(1, -1, "d", true)
+     EnumerateStructureLinks(2, -1, "d", true)
+
+
     SubdivideStructures()
+
     UpdatePhysicsObjects()
     PhysLibRender.PhysicsUpdate()
+    
+   
+    local endTime = GetRealTime()
+    BetterLog("Time taken: " .. (endTime - startTime) * 1000 .. "ms")
 end
-
 
 --#region events
 function OnDeviceCreated(teamId, deviceId, saveName, nodeA, nodeB, t, upgradedId)
@@ -84,12 +101,10 @@ function OnNodeBroken(thisNodeId, nodeIdNew)
     local nodeA = NodePosition(thisNodeId)
     nodeA.links = {}
     nodeA.id = thisNodeId
-    nodeA.GetVelocity = function() if nodeA.velocity then return nodeA.velocity else nodeA.velocity = NodeVelocity(thisNodeId) return nodeA.velocity end end
     NodesRaw[thisNodeId] = nodeA
     local nodeB = NodePosition(nodeIdNew)
     nodeB.links = {}
     nodeB.id = nodeIdNew
-    nodeB.GetVelocity = function() if nodeB.velocity then return nodeB.velocity else nodeB.velocity = NodeVelocity(nodeIdNew) return nodeB.velocity end end
     NodesRaw[nodeIdNew] = nodeB
     -- Step 4, recursively readd links to the nodes
     AddLinksRecursive(thisNodeId)

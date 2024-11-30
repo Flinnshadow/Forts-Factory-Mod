@@ -253,13 +253,13 @@ function UpdateModules()
                     end
 
                     -- Debugging visuals for buffer center
-                    if debugMode then
+                    if DebugMode then
                         -- Draw a magenta circle at the center position of the buffer
                         SpawnCircle(bufferPos, 5, Colour(255, 0, 255, 255), 0.1)
                     end
 
                     -- Debugging visuals for hitboxes
-                    if debugMode and buffer.hitbox then
+                    if DebugMode and buffer.hitbox then
                         -- Calculate the half size
                         local halfSizeX = buffer.hitbox.size.x
                         local halfSizeY = buffer.hitbox.size.y
@@ -298,7 +298,7 @@ function UpdateModules()
             UpdateBufferPositions(module.outputBuffers)
 
             -- Debugging visuals for module position
-            if debugMode then
+            if DebugMode then
                 -- Draw a blue circle at the module's position
                 SpawnCircle(pos, 15, Colour(0, 0, 255, 255), 0.1)
             end
@@ -310,7 +310,7 @@ function UpdateModules()
         inserter:Update()
 
         -- Inserter debugging visuals if needed
-        if debugMode then
+        if DebugMode then
             -- Draw a red line from start to end position
             SpawnLine(inserter.startPosition, inserter.endPosition, Colour(255, 0, 0, 255), 0.1)
             -- Draw a yellow circle at the inserter's current position
@@ -766,7 +766,7 @@ function OnKey(key, down)
         CreateItem(ProcessedMousePos(),"apple")
     end
     if key == "o" and down then
-        if debugMode then
+        if DebugMode then
             for key, value in pairs(ExistingModules) do
                 value.craftingTime = 0
                 value.baseCraftingTime = 0.5

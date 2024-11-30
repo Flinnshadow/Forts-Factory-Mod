@@ -1,3 +1,5 @@
+--scripts/utility/physLib/render.lua
+
 PhysLibRender = {
     LastFrameTime = 0,
     TotalFrameTime = data.updateDelta
@@ -14,7 +16,7 @@ function PhysLibRender.OnDraw()
         local lastPos = Object.lastFramePos
         local effectId = Object.effectId
 
-        local drawPos = Vec3Lerp(lastPos, pos, t)
+        local drawPos = Vec2Lerp(lastPos, pos, t)
         if not Object.InterpolateThisFrame then drawPos = pos end
         SetEffectPosition(effectId, drawPos)
     end
