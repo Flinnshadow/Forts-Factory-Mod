@@ -11,12 +11,20 @@ DebugMode = true
 
 
 function Load()
-    LoadPhysLib()
+    PhysLib:Load()
     Gravity = GetConstant("Physics.Gravity")
 end
 
+local frameRan = true
 function Update(frame)
-    UpdatePhysLib(frame)
+    if not frameRan then 
+        BetterLog("Update Error detected")
+        _G["Update"] = function() end
+    end
+    frameRan = false
+    local startTime = GetRealTime()
+    
+    PhysLib:Update(frame)
     UpdateItemObjects()
 
     UpdateModules()
@@ -25,29 +33,52 @@ function Update(frame)
     CreateItem(ProcessedMousePos(),"IronOre")
     end
 
-    --perf test
-    -- local lineA1 = Vec3(-50, -25)
-    -- local lineA2 = Vec3(-30, -75)
+    local endTime = GetRealTime()
+    if (endTime - startTime) * 1000 > 35 then 
+        -- BetterLog("Error: Runtime limit exceeded, destroying Update for your own sanity")
+        -- _G["Update"] = function() end 
 
-    -- local lineB1 = Vec3(-30, -25)
-    -- local lineB2 = ProcessedMousePos()
-
-    -- local startTime = GetRealTime()
-    -- for i = 1, 10000 do
-    --     ClosestPointsBetweenLines(lineA1, lineA2, lineB1, lineB2)
-    -- end
-    -- local endTime = GetRealTime()
-    -- BetterLog("Time taken: " .. (endTime - startTime) * 1000 .. "ms")
-
-    -- local bestA, _, bestB, _, _ = ClosestPointsBetweenLines(lineA1, lineA2, lineB1, lineB2)
-
-    -- SpawnCircle(bestA, 5, White(), 0.06)
-    -- SpawnCircle(bestB, 5, White(), 0.06)
-
-    -- SpawnLine(lineA1, lineA2, White(), 0.06)
-    -- SpawnLine(lineB1, lineB2, White(), 0.06)
+    end
+    frameRan = true
 end
 
-function OnDraw()
-    PhysLibRender.OnDraw()
+function OnUpdate()
+    local startTime = GetRealTime()
+    PhysLib:OnUpdate()
+    local endTime = GetRealTime()
+    if (endTime - startTime) * 1000 > 40 then 
+        BetterLog("Error: Runtime limit exceeded, destroying OnUpdate for your own sanity")
+        _G["OnUpdate"] = function() end 
+
+    end
+end
+
+
+
+function OnDeviceCreated(teamId, deviceId, saveName, nodeA, nodeB, t, upgradedId)
+    PhysLib:OnDeviceCreated(teamId, deviceId, saveName, nodeA, nodeB, t, upgradedId)
+end
+
+function OnGroundDeviceCreated(teamId, deviceId, saveName, pos, upgradedId)
+    PhysLib:OnGroundDeviceCreated(teamId, deviceId, saveName, pos, upgradedId)
+end
+
+function OnNodeCreated(nodeId, teamId, pos, foundation, selectable, extrusion)
+    PhysLib:OnNodeCreated(nodeId, teamId, pos, foundation, selectable, extrusion)
+end
+
+function OnNodeDestroyed(nodeId, selectable)
+    PhysLib:OnNodeDestroyed(nodeId, selectable)
+end
+
+function OnNodeBroken(thisNodeId, nodeIdNew)
+    PhysLib:OnNodeBroken(thisNodeId, nodeIdNew)
+end
+
+function OnLinkCreated(teamId, saveName, nodeIdA, nodeIdB, pos1, pos2, extrusion)
+    PhysLib:OnLinkCreated(teamId, saveName, nodeIdA, nodeIdB, pos1, pos2, extrusion)
+end
+
+function OnLinkDestroyed(teamId, saveName, nodeIdA, nodeIdB, breakType)
+    PhysLib:OnLinkDestroyed(teamId, saveName, nodeIdA, nodeIdB, breakType)
 end

@@ -1,114 +1,224 @@
 --scripts/utility/physLib/physicsObjects.lua
-PhysicsObjects = {}
-PhysicsObjectsTree = {}
 
-function UpdatePhysicsObjects()
-    CalculateObjectsExtents(PhysicsObjects)
-    --PhysicsObjectsTree = GenerateObjectTree(PhysicsObjects)
+
+
+local PhysicsObjects = PhysLib.PhysicsObjects
+local StructureTree = PhysLib.BspTrees.StructureTree
+local ObjectTree = PhysLib.BspTrees.ObjectTree
+function PhysicsObjects:Update()
+    local objects = self.Objects
+    self:CalculateObjectsExtents(objects)
+    ObjectTree.ObjectsTree = GenerateObjectTree(objects)
 
 
     local delta = data.updateDelta
-    for i = 1, #PhysicsObjects do
-        local Object = PhysicsObjects[i]
-        ProcessPhysicsObject(Object, delta)
+    for i = 1, #objects do
+        local object = objects[i]
+        object.lastFramePos.x = object.pos.x
+        object.lastFramePos.y = object.pos.y
     end
+    for i = 1, #objects do
+        local object = objects[i]
+        self:ProcessIntegration(object, delta)
+        self:ProcessObjectCollisions(object, delta)
+    end
+    for i = 1, #objects do
+        self:ProcessKineticChanges(objects[i])
+    end
+    for i = 1, #objects do
+        self:FinalIntegration(objects[i], delta)
+    end
+    for i = 1, #objects do
+        self:ProcessLinkCollisions(objects[i], delta)
+    end
+
 end
 
-
-function ProcessPhysicsObject(object, delta)
-
+function PhysicsObjects:ProcessIntegration(object, delta)
     local objectPos = object.pos
-    object.lastFramePos = object.pos
+    object.lastFramePos.x = objectPos.x
+    object.lastFramePos.y = objectPos.y
+
+
+
     objectPos.x = objectPos.x + (delta* 0.5 * object.velocity.x)
     objectPos.y = objectPos.y + (delta* 0.5 * object.velocity.y)
     object.velocity.y = object.velocity.y + Gravity * delta
+
+end
+
+function PhysicsObjects:FinalIntegration(object, delta)
+    local objectPos = object.pos
     objectPos.x = objectPos.x + (delta* 0.5 * object.velocity.x)
     objectPos.y = objectPos.y + (delta* 0.5 * object.velocity.y)
+end
+function PhysicsObjects:ProcessObjectCollisions(object, delta)
+    local objectResults = ObjectTree:ObjectCast(object)
 
-    object.nextPos = {x = object.pos.x + object.velocity.x * delta, y = object.pos.y + object.velocity.y * delta}
-
-    HighlightCapsule(object.pos, object.nextPos, object.radius)
-
-    local structureCollisionResults = CapsuleCollisionOnStructure(object.pos, object.nextPos, object.radius)
-
-    local noBackgroundResults = {}
-    local portalResults = {}
-    local filteredResults = {}
-    for j = 1, #structureCollisionResults do
-        local snapResult = structureCollisionResults[j]
-        if snapResult.material == "backbracing" then
-            continue
-        end
-        if snapResult.material == "portal" and snapResult.type == 1 then
-            portalResults[#portalResults + 1] = snapResult
-            continue
-        end
-        noBackgroundResults[#noBackgroundResults + 1] = snapResult
+    local posChange = {}
+    local velChange = {}
+    for i = 1, #objectResults do
+        self:ProcessObjectCollisionResult(object, objectResults[i], posChange, velChange, delta)
     end
-    
-    for j = 1, #noBackgroundResults do
-        local snapResult = noBackgroundResults[j]
-        if snapResult.type == 1 then
-            
-            filteredResults[#filteredResults + 1] = snapResult
-        end
-    end
-    if #filteredResults == 0 then
-        filteredResults = noBackgroundResults
-    end
-
-    local posResolution = {}
-    local velResolution = {}
-    local earliestResult = GetEarliestResult(filteredResults)
-    if not earliestResult then return end
-    for i = 1, #filteredResults do
-        BreakStructureCollisionResult(object, filteredResults[i], earliestResult.time, posResolution, velResolution)
-    end
-    local averagePosResolution = Vec2Average(posResolution)
-    local averageVelResolution = Vec2Average(velResolution)
-
-    object.pos.x = object.pos.x + averagePosResolution.x
-    object.pos.y = object.pos.y + averagePosResolution.y
-    object.velocity.x = object.velocity.x + averageVelResolution.x
-    object.velocity.y = object.velocity.y + averageVelResolution.y
+    object.posChange = posChange
+    object.velChange = velChange
 end
 
-function GetEarliestResult(results)
-    local earliestResult = nil
-    local earliestTime = math.huge
+function PhysicsObjects:ProcessKineticChanges(object)
+    local posChange = object.posChange
+    local velChange = object.velChange
 
-    for i = 1, #results do
-        local result = results[i]
-        if result.time < earliestTime then
-            earliestTime = result.time
-            earliestResult = result
-        end
+    for i = 1, #posChange do
+        local posChange = posChange[i]
+        local velChange = velChange[i]
+
+        --object.pos.x = object.pos.x + posChange.x
+        --object.pos.y = object.pos.y + posChange.y
+        object.velocity.x = object.velocity.x + velChange.x
+        object.velocity.y = object.velocity.y + velChange.y
     end
-    return earliestResult
+    object.posChange = nil
+    object.velChange = nil
 end
 
-
-local maxTimeWindow = 0.1
-function BreakStructureCollisionResult(object, result, earliestTime, posResolution, velResolution)
-
-    if result.time > earliestTime + maxTimeWindow then return end
-    local objectPos = object.pos
-    local objectNextPos = object.nextPos
-    local velocity = object.velocity
-    local radius = object.radius
+function PhysicsObjects:ProcessObjectCollisionResult(objectA, result, posChange, velChange, delta)
+    --delta = 1 / delta
+    local objectB = result.object
+    local distance = result.distance
+    if distance == 0 then return end
     local normal = result.normal
-    local resultPos = result.pos
-    local testPos = result.testPos
+
+    local displacement = (objectA.radius + objectB.radius - distance)
+
+    local displacementX = displacement * normal.x
+    local displacementY = displacement * normal.y
+
+    local posChangeLocal = {x = displacementX / 2, y = displacementY / 2}
+
+
+    local velocityA = objectA.velocity
+    local velocityAX = velocityA.x
+    local velocityAY = velocityA.y
+    local velocityB = objectB.velocity
+    local velocityBX = velocityB.x
+    local velocityBY = velocityB.y
+    local relativeVelocityX = velocityAX - velocityBX
+    local relativeVelocityY = velocityAY - velocityBY
+
+    --local velChangeLocal = {x = relativeVelocityX * normal.x / 2 * normal.x, y = relativeVelocityY * normal.y / 2 * normal.y}
+   -- BetterLog(objectA.radius + objectB.radius - distance)
+    --velChangeLocal.x = velChangeLocal.x + normal.x * 10 * (objectA.radius + objectB.radius - distance)
+    --velChangeLocal.y = velChangeLocal.y + normal.y * 10 * (objectA.radius + objectB.radius - distance)
+
+    local objDefA = objectA.objectDefinition
+    local objDefB = objectB.objectDefinition
+    local velChangeLocal = {}
+    local springX = objDefA.springConst * objDefB.springConst * displacementX
+    local springY = objDefA.springConst * objDefB.springConst * displacementY
+    local dampeningX = objDefA.dampening * objDefB.dampening * relativeVelocityX
+    local dampeningY = objDefA.dampening * objDefB.dampening * relativeVelocityY
+    
+    velChangeLocal.x = springX - dampeningX
+    velChangeLocal.y = springY - dampeningY
+    
+    
+    posChange[#posChange+1] = posChangeLocal
+    velChange[#velChange+1] = velChangeLocal
+end
+function PhysicsObjects:ProcessLinkCollisions(object, delta)
+    local snapResults = StructureTree:CircleCast(object.lastFramePos, object.pos, object.radius)
+    if #snapResults == 0 then return end
+    local posChange = {}
+    local velChange = {}
+    
+    for i = 1, #snapResults do
+        local snapResult = snapResults[i]
+        self:ProcessStructureCollisionResult(object, snapResult, posChange, velChange, delta, #snapResults)
+    end
+
+    local testPos = snapResults[1].testPos
+    
+    object.pos.x = testPos.x
+    object.pos.y = testPos.y
+
+    for i = 1, #snapResults do
+        local posChange = posChange[i]
+        local velChange = velChange[i]
+
+        object.pos.x = object.pos.x + posChange.x
+        object.pos.y = object.pos.y + posChange.y
+        object.velocity.x = object.velocity.x + velChange.x
+        object.velocity.y = object.velocity.y + velChange.y
+    end
+end
+
+
+function PhysicsObjects:ProcessStructureCollisionResult(object, result, posChange, velChange, delta, totalCount)
+    local objectPos = object.pos
+
+    local velocity = object.velocity
+    local velocityX = velocity.x
+    local velocityY = velocity.y
+    local velChangeX = 0
+    local velChangeY = 0
+    local radius = object.radius
+    local linkNormal = result.normal
+    local linkUnit = {x = linkNormal.y, y = -linkNormal.x}
+    if result.type == 2 then linkNormal.x = linkNormal.x / totalCount linkNormal.y = linkNormal.y / totalCount end -- A little bit hacky
     local dist = result.distance
+    local t = result.t
 
-    local velocityPerpToSurface = Vec2Dot(velocity, normal)
+    local materialSaveName = result.material
+    local nodeA = result.nodeA
+    local nodeB = result.nodeB
+
+    local linkDefinition = LinkDefinitions[materialSaveName]
+    local objectDefinition = object.objectDefinition
+    local platformVelocity = Vec2Lerp(NodeVelocity(nodeA.id), NodeVelocity(nodeB.id), t)
+
+    -- Shifting frame of reference
+    local conveyorSpeed = linkDefinition.ConveyorSpeed
+    velocityX = velocityX - platformVelocity.x + conveyorSpeed * linkUnit.x 
+    velocityY = velocityY - platformVelocity.y + conveyorSpeed * linkUnit.y
+
+    -- Calculating position/velocity change from direct impact
+    local velocityPerpendicular = velocityX * linkNormal.x + velocityY * linkNormal.y
+    local velocityParallel = velocityX * linkUnit.x + velocityY * linkUnit.y
     local error = radius - dist
+    
+    -- Rigid force
+    local posChangeLocal = {x = (0.1 + error) * linkNormal.x, y = (0.1 + error) * linkNormal.y}
+    local velChangeLocal = {x = -velocityPerpendicular * linkNormal.x, y = -velocityPerpendicular * linkNormal.y}
 
-    posResolution[#posResolution+1] = {x = error * normal.x, y = error * normal.y}
-    velResolution[#velResolution+1] = {x = -velocityPerpToSurface * normal.x, y = -velocityPerpToSurface * normal.y}
+    -- Gravity friction
+    local gravityFriction = -Gravity * linkNormal.y / 1000
 
-    -- objectNextPos.x = objectNextPos.x + error * normal.x
-    -- objectNextPos.y = objectNextPos.y + error * normal.y
+    -- Dynamic friction
+    local frictionForce = objectDefinition.DynamicFriction * linkDefinition.DynamicFriction * gravityFriction * velocityParallel
+    local frictionForceX = - frictionForce * linkUnit.x
+    local frictionForceY = - frictionForce * linkUnit.y
+
+    -- Add friction to velocity change
+    velChangeX = velChangeX + frictionForceX * delta
+    velChangeY = velChangeY + frictionForceY * delta
+
+    -- Return to world frame
+    velChangeX = velChangeX + platformVelocity.x - conveyorSpeed * linkUnit.x
+    velChangeY = velChangeY + platformVelocity.y - conveyorSpeed * linkUnit.y
+
+    velChangeLocal.x = velChangeLocal.x + velChangeX
+    velChangeLocal.y = velChangeLocal.y + velChangeY
+
+    -- Apply static friction
+    if (math.abs(velocityParallel) < (objectDefinition.StaticFriction * linkDefinition.StaticFriction * gravityFriction)) then
+        velChangeLocal.x = velChangeLocal.x - velocityParallel * linkUnit.x
+        velChangeLocal.y = velChangeLocal.y - velocityParallel * linkUnit.y
+    end
+
+    posChange[#posChange+1] = posChangeLocal
+    velChange[#velChange+1] = velChangeLocal
+    -- objectPos.x = testPos.x + error * normal.x
+    -- objectPos.y = testPos.y + error * normal.y
     -- velocity.x = velocity.x - velocityPerpToSurface * normal.x
     -- velocity.y = velocity.y - velocityPerpToSurface * normal.y
                 
@@ -116,248 +226,65 @@ end
 
 local defaultObjectDefinition = {
 
-    springConst = 400,
-    dampening = 20,
+    springConst = 3,
+    dampening = 0.45                                                                                                                                                                                                                                                                                                                 ,
     DynamicFriction = 4,
     StaticFriction = 4,
 }
 
-function RegisterPhysicsObject(pos, radius, velocity, objectDefinition, effectId)
+function PhysicsObjects:Register(pos, radius, velocity, objectDefinition, effectId)
     pos = pos or Vec3(0, 0, 0)
     radius = radius or (50 / 2)
     velocity = velocity or Vec3(0, 0, 0)
     objectDefinition = objectDefinition or defaultObjectDefinition
     local Object = {
         pos = pos,
-        nextPos = pos,
-        prevPos = pos,
         radius = radius,
         velocity = velocity,
         objectDefinition = objectDefinition,
-        lastFramePos = pos,
+        lastFramePos = {x = 0, y = 0},
         effectId = effectId,
         extents = {}
     }
-    PhysicsObjects[#PhysicsObjects + 1] = Object
-    BetterLog(#PhysicsObjects)
+    local objects = self.Objects
+    objects[#objects + 1] = Object
+    BetterLog(#objects)
     return Object
 end
-function UnregisterPhysicsObject(Object)
-    for i = 1, #PhysicsObjects do
-        if PhysicsObjects[i] == Object then
-            table.remove(PhysicsObjects, i)
-            BetterLog(#PhysicsObjects)
+function PhysicsObjects:Unregister(object)
+    local objects = self.Objects
+    for i = 1, #objects do
+        if objects[i] == object then
+            table.remove(objects, i)
+            BetterLog(#objects)
             return
         end
     end
 end
 
-
-TestObject = {
-    x = 0,
-    y = 0,
-    nextX = 0,
-    nextY = 0,
-    radius = 50 / 2,
-    velocity = Vec3(0, 0, 0),
-    effectId = 0,
-    extents = {minX = -1000, minY = -1000, maxX = 1000, maxY = 1000}
-
-
-}
-
-function CalculateObjectsExtents(Objects)
+function PhysicsObjects:CalculateObjectsExtents(Objects)
     for i = 1, #Objects do
-        CalculateObjectExtents(Objects[i])
+        self:CalculateObjectExtents(Objects[i])
     end
 end
 
-function CalculateObjectExtents(object)
+function PhysicsObjects:CalculateObjectExtents(object)
     local radius = object.radius
+    local prevPos = object.lastFramePos
     local pos = object.pos
-    local nextPos = object.nextPos
+
     local posX = pos.x
     local posY = pos.y
-    local nextPosX = nextPos.x
-    local nextPosY = nextPos.y
+    local prevPosX = prevPos.x
+    local prevPosY = prevPos.y
 
-    local minX = (posX < nextPosX and posX or nextPosX) - radius
-    local minY = (posY < nextPosY and posY or nextPosY) - radius
-    local maxX = (posX > nextPosX and posX or nextPosX) + radius
-    local maxY = (posY > nextPosY and posY or nextPosY) + radius
+    local minX = (posX < prevPosX and posX or prevPosX) - radius
+    local minY = (posY < prevPosY and posY or prevPosY) - radius
+    local maxX = (posX > prevPosX and posX or prevPosX) + radius
+    local maxY = (posY > prevPosY and posY or prevPosY) + radius
 
     object.extents = {minX = minX, minY = minY, maxX = maxX, maxY = maxY, center = {x = (minX + maxX) / 2, y = (minY + maxY) / 2}}
 
 end
 
 
-function GenerateObjectTree(objects)
-    if #objects == 0 then return end
-    -- TODO: move SubdivideGroup to it's own file
-    return SubdivideObjects(objects, 0)
-end
-
-
-
-
-
-
-function SubdivideObjects(objects, depth)
-    local rect = GetObjectRectangle(objects)
-    local count = rect.count
-    --Degenerate case: two nodes positioned mathematically perfectly on top of each other (this occurs when nodes rotate too far and split)
-    if count <= 1 or rect.width + rect.height == 0 then
-
-        rect = objects[1].extents
-        return {children = objects, rect = rect, deepest = true}
-    end
-
-    local widthHeightRatio = rect.width / rect.height
-
-    local subTree
-    
-    if (widthHeightRatio > SDTYPE_BOTH_THRESHOLD_MAX) then
-        --Divide vertically
-        subTree = DivideObjectsV(objects, rect.x)
-    elseif (widthHeightRatio < SDTYPE_BOTH_THRESHOLD_MIN) then
-        --Divide horizontally
-        subTree = DivideObjectsH(objects, rect.y)
-    else
-        --Divide both
-        subTree = DivideObjectsVH(objects, rect)
-    end
-    local children = {}
-    for i = 1, #subTree do
-        local group = subTree[i]
-
-        if group == 0 or #group == 0 then continue end
-        children[i] = SubdivideObjects(group, depth + 1)
-    end
-
-    -- Call back the minimum quad extent
-    for i = 1, #children do
-        local child = children[i]
-        if not child then continue end
-        local childRect = child.rect
-        rect.minX = (rect.minX < childRect.minX) and rect.minX or childRect.minX
-        rect.maxX = (rect.maxX > childRect.maxX) and rect.maxX or childRect.maxX
-        rect.minY = (rect.minY < childRect.minY) and rect.minY or childRect.minY
-        rect.maxY = (rect.maxY > childRect.maxY) and rect.maxY or childRect.maxY
-    end
-    children.type = subTree.type
-    return {children = children, rect = rect, deepest = false}
-end
-
-
-function DivideObjectsV(nodes, center)
-    local subTree1, subTree2 = {}, {}
-    local count1, count2 = 0, 0
-
-
-    for i = 1, #nodes do
-        local v = nodes[i]
-        local pos = v.pos
-        if pos.x < center then
-            count1 = count1 + 1
-            subTree1[count1] = v
-        else
-            count2 = count2 + 1
-            subTree2[count2] = v
-        end
-    end
-
-    return { subTree1, subTree2, type = 1 }
-end
-
-function DivideObjectsH(nodes, center)
-    local subTree1, subTree2 = {}, {}
-    local count1, count2 = 0, 0
-
-    for i = 1, #nodes do
-        local v = nodes[i]
-        local pos = v.pos
-        if pos.y < center then
-            count1 = count1 + 1
-            subTree1[count1] = v
-        else
-            count2 = count2 + 1
-            subTree2[count2] = v
-        end
-    end
-
-    return { subTree1, subTree2, type = 2 }
-end
-
-function DivideObjectsVH(nodes, center)
-    local subTree1, subTree2, subTree3, subTree4 = {}, {}, {}, {}
-    local count1, count2, count3, count4 = 0, 0, 0, 0
-
-    local centerY = center.y
-
-    for i = 1, #nodes do
-        local v = nodes[i]
-        local pos = v.pos
-        local y = pos.y
-        local pos = v.pos
-        if pos.x < center.x then
-            if y < centerY then
-                count1 = count1 + 1
-                subTree1[count1] = v
-            else
-                count2 = count2 + 1
-                subTree2[count2] = v
-            end
-        else
-            if y < centerY then
-                count3 = count3 + 1
-                subTree3[count3] = v
-            else
-                count4 = count4 + 1
-                subTree4[count4] = v
-            end
-        end
-    end
-    return { subTree1, subTree2, subTree3, subTree4, type = 3 }
-end
-
-
-
-
-function GetObjectRectangle(objects)
-    local huge = math.huge
-    local count = #objects
-    local minX, minY, maxX, maxY = huge, huge, -huge, -huge
-    local averageX, averageY = 0, 0
-
-
-    for i = 1, count do
-        local v = objects[i]
-        local pos = v.pos
-        local x, y = pos.x, pos.y
-
-        -- Update sums for average
-        averageX = averageX + x
-        averageY = averageY + y
-
-        -- Update bounds
-        minX = (x < minX) and x or minX
-        maxX = (x > maxX) and x or maxX
-
-        minY = (y < minY) and y or minY
-        maxY = (y > maxY) and y or maxY
-    end
-
-
-
-    return {
-        minX = minX,
-        minY = minY,
-        maxX = maxX,
-        maxY = maxY,
-        width = maxX - minX,
-        height = maxY - minY,
-        x = averageX / count,
-        y = averageY / count,
-        count = count
-    }
-end

@@ -773,7 +773,7 @@ function OnKey(key, down)
         BetterLog(ExistingModules)
     end
     if key == "y" and down then
-        ReloadPhysLib()
+        PhysLib:Load()
     end
 end
 

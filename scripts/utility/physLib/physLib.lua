@@ -1,374 +1,190 @@
 --scripts/utility/physLib/physLib.lua
+--#region class table
+PhysLib = {
+    Render = {},
+    Structures = {},
+    BspTrees = {
+        ObjectTree = {},
+        StructureTree = {},
+        Helper = {},
+    },
+    NodesRaw = {},
+    Nodes = {},
 
+    ExistingLinks = {},
+    Links = {},
+    LinksTree = {},
 
---#region Includes
-dofile("scripts/forts.lua")
-
-dofile(path .. "/scripts/utility/physLib/entrypoints.lua")
-dofile(path .. "/scripts/utility/physLib/structures.lua")
-dofile(path .. "/scripts/utility/physLib/physicsObjects.lua")
-dofile(path .. "/scripts/utility/physLib/render.lua")
+    PhysicsObjects = {
+        Objects = {},
+        ObjectsTree = {},
+    },
+}
 --#endregion
 
---#region Global tables
-
-NodesRaw = {}
-Nodes = {}
-NodeTree = {}
-
-Links = {}
-LinksTree = {}
+--#region class loading
+local physLibPath = path .. "/scripts/utility/physLib"
+dofile(physLibPath .. "/structures.lua")
+dofile(physLibPath .. "/physicsObjects.lua")
+dofile(physLibPath .. "/render.lua")
+dofile(physLibPath .. "/bspTrees/helper.lua")
+dofile(physLibPath .. "/bspTrees/objectTree.lua")
+dofile(physLibPath .. "/bspTrees/structureTree.lua")
 --#endregion
 
-
-
-
-
---#region Capsule collision
-function CapsuleCollisionOnStructure(posA, posB, radius)
-    local results = {}
-    CapsuleCollisionsOnBranch(posA, posB, radius, LinksTree, results)
-    return results
-end
-function CapsuleCollisionOnObjects(posA, posB, radius)
-    local results = {}
-    CapsuleCollisionsOnBranch(posA, posB, radius, ObjectCastTree, results)
-end
-function CapsuleCollisionsOnBranch(posA, posB, radius, branch, results)
-    if not branch then return end
-    if branch.deepest then
-        -- Deepest level: Test if within the bounding squares of individual nodes
-        local nodes = branch.children
-
-        for i = 1, #nodes do
-            local node = nodes[i]
-            CapsuleCollisionOnLinks(posA, posB, radius, node, results)
-        end
-        return
-    end
-
-
-    --HighlightExtents(rect, 0.06, Red())
-    local children = branch.children
-    for i = 1, #children do
-        local child = children[i]
-        if not child then continue end
-        local childRect = child.rect
-
-        if LineCollidesWithRect(posA, posB, radius, childRect) then
-            CapsuleCollisionsOnBranch(posA, posB, radius, child, results)
-        end
-    end
+--#region API
+function RegisterPhysicsObject(pos, radius, velocity, objectDefinition, effectId)
+    return PhysLib.PhysicsObjects:Register(pos, radius, velocity, objectDefinition, effectId)
 end
 
-
-
-local INSIDE = 0
-local LEFT = 1
-local RIGHT = 2
-local BOTTOM = 4
-local TOP = 8
-
-function ComputeCode(x, y, rect, radius)
-    local minX, minY = rect.minX - radius, rect.minY - radius
-    local maxX, maxY = rect.maxX + radius, rect.maxY + radius
-    
-    local code = INSIDE
-
-    if x < minX then
-        code = code | LEFT
-    elseif x > maxX then
-        code = code | RIGHT
-    end
-    if y < minY then
-        code = code | BOTTOM
-    elseif y > maxY then
-        code = code | TOP
-    end
-
-    return code
+function UnregisterPhysicsObject(object)
+    return PhysLib.PhysicsObjects:Unregister(object)
 end
+--#endregion
 
-function LineCollidesWithRect(posA, posB, radius, rect)
-    local x1, y1 = posA.x, posA.y
-    local x2, y2 = posB.x, posB.y
-
-    local minX, minY = rect.minX - radius, rect.minY - radius
-    local maxX, maxY = rect.maxX + radius, rect.maxY + radius
-
-    local codeA = ComputeCode(x1, y1, rect, radius)
-    local codeB = ComputeCode(x2, y2, rect, radius)
-
-    local accept = false
-
-    while true do
-        if codeA == 0 and codeB == 0 then
-            -- Both are inside
-            accept = true
-            break
-        elseif codeA & codeB ~= 0 then
-            -- Both are outside
-            break
-        else
-            -- Some segment of the line is inside
-
-            local codeOut
-            local x, y
-
-            if codeA ~= 0 then
-                codeOut = codeA
-            else
-                codeOut = codeB
-            end
-
-            if codeOut & TOP ~= 0 then
-                x = x1 + (x2 - x1) * (maxY - y1) / (y2 - y1);
-                y = maxY;
-            elseif codeOut & BOTTOM ~= 0 then
-                x = x1 + (x2 - x1) * (minY - y1) / (y2 - y1);
-                y = minY;
-            elseif codeOut & RIGHT ~= 0 then
-                y = y1 + (y2 - y1) * (maxX - x1) / (x2 - x1);
-                x = maxX;
-            elseif codeOut & LEFT ~= 0 then
-                y = y1 + (y2 - y1) * (minX - x1) / (x2 - x1);
-                x = minX;
-            end
-
-            -- intersection point found
-
-            if codeOut == codeA then
-                x1 = x
-                y1 = y
-                codeA = ComputeCode(x1, y1, rect, radius)
-            else
-                x2 = x
-                y2 = y
-                codeB = ComputeCode(x2, y2, rect, radius)
-            end
-        end
-
-    end
-   
-    if accept then 
-        return true 
-    else 
-        return false 
-
-    end
-end
-
-
-function ClosestPointOnLineSegment(A, B, point)
-
+--#region entrypoints
+function PhysLib:Load()
+    PhysLib.Nodes = {}
+    PhysLib.NodesRaw = {}
+    PhysLib.ExistingLinks = {}
+    PhysLib.Links = {}
+    PhysLib.LinksTree = {}
 
     
-    local ABX, ABY = B.x - A.x, B.y - A.y
-    local t = ((point.x - A.x) * ABX + (point.y - A.y) * ABY) / (ABX * ABX + ABY * ABY)
+    EnumerateStructureLinks(0, -1, "c", true)
+    EnumerateStructureLinks(1, -1, "c", true)
+    EnumerateStructureLinks(2, -1, "c", true)
 
-    t = math.min(math.max(t, 0), 1)
-    return {x = A.x + t * ABX, y = A.y + t * ABY}
+    self:UpdateNodeTable()
 end
 
-local reusedCandidates = {-1, -1, 1, -1, -1, 1, 0, -1, -1, 0, 0, 0, 0, 1, 1, 0, 1, 1}
-local reusedFilteredList = {}
-function ClosestPointsBetweenLines(A1, A2, B1, B2)
+function PhysLib:Update(frame)
+    local startTime = GetRealTime()
+    self.Render:BeforePhysicsUpdate()
 
-    local candidates = reusedCandidates
-    local filteredList = reusedFilteredList
-    local A1x, A1y, A2x, A2y, B1x, B1y, B2x, B2y = A1.x, A1.y, A2.x, A2.y, B1.x, B1.y, B2.x, B2.y
-
-    local A1SubB1x, A1SubB1y = A1x - B1x, A1y - B1y
-    local A2SubA1x, A2SubA1y = A2x - A1x, A2y - A1y
-    local A2SubB1x, A2SubB1y = A2x - B1x, A2y - B1y
-    local B1SubA1x, B1SubA1y = B1x - A1x, B1y - A1y
-    local B2SubA1x, B2SubA1y = B2x - A1x, B2y - A1y
-    local B2SubB1x, B2SubB1y = B2x - B1x, B2y - B1y
-    
-    local A1SubB1DotA2SubA1 = A1SubB1x * A2SubA1x + A1SubB1y * A2SubA1y
-    local B2SubB1Squared = B2SubB1x * B2SubB1x + B2SubB1y * B2SubB1y
-    local A1SubB1DotB2SubB1 = A1SubB1x * B2SubB1x + A1SubB1y * B2SubB1y
-    local AtSubA1DotB2SubB1 = A2SubA1x * B2SubB1x + A2SubA1y * B2SubB1y
-    local A2SubA1CrossB2SubB1 = A2SubA1x * B2SubB1y - A2SubA1y * B2SubB1x
-    local A2SubA1Squared = A2SubA1x * A2SubA1x + A2SubA1y * A2SubA1y
-    local B2SubB1DotA2SubA1 = B2SubB1x * A2SubA1x + B2SubB1y * A2SubA1y
-    local A2SubB1DotB2SubB1 = A2SubB1x * B2SubB1x + A2SubB1y * B2SubB1y
-    local B2SubA1DotA2SubA1 = B2SubA1x * A2SubA1x + B2SubA1y * A2SubA1y
-    local B1SubA1DotA2SubA1 = B1SubA1x * A2SubA1x + B1SubA1y * A2SubA1y
+    self.Structures:UpdateNodePositions()
 
 
+    -- Update links positions etc
+    PhysLib.ExistingLinks = {}
+    PhysLib.Links = {}
+    EnumerateStructureLinks(0, -1, "d", true)
+    EnumerateStructureLinks(1, -1, "d", true)
+    EnumerateStructureLinks(2, -1, "d", true)
 
-    local t1 = -(A1SubB1DotA2SubA1 * B2SubB1Squared - A1SubB1DotB2SubB1 * AtSubA1DotB2SubB1) / (A2SubA1CrossB2SubB1 * A2SubA1CrossB2SubB1)
-    local t2 = (A1SubB1DotA2SubA1 + A2SubA1Squared * t1) / B2SubB1DotA2SubA1
-    local t3 = A2SubB1DotB2SubB1 / B2SubB1Squared
-    local t4 = B2SubA1DotA2SubA1 / A2SubA1Squared
-    local t5 = A1SubB1DotB2SubB1 / B2SubB1Squared
-    local t6 = B1SubA1DotA2SubA1 / A2SubA1Squared
-    candidates[1] = t1
-    candidates[2] = t2
-    candidates[4] = t3
-    candidates[5] = t4
-    candidates[8] = t5
-    candidates[9] = t6
-    
-    
-    local candidateCount = 18
-    local filteredListCount = 1
-    for i = 1, candidateCount, 2 do
-        if 0 <= candidates[i] and candidates[i] <= 1 and 0 <= candidates[i + 1] and candidates[i + 1] <= 1 then
-            filteredList[filteredListCount] = candidates[i]
-            filteredList[filteredListCount + 1] = candidates[i + 1]
-            filteredListCount = filteredListCount + 2
-        end
+
+    self.BspTrees.StructureTree:Subdivide(PhysLib.Links)
+
+    self.PhysicsObjects:Update()
+    self.Render:PhysicsUpdate()
+    local endTime = GetRealTime()
+    BetterLog("Physics update took " .. (endTime - startTime) * 1000 .. "ms")
+end
+
+function PhysLib:OnUpdate()
+    self.Render:OnUpdate()
+end
+
+--#region events
+function PhysLib:OnDeviceCreated(teamId, deviceId, saveName, nodeA, nodeB, t, upgradedId)
+    self:Load()
+end
+
+function PhysLib:OnGroundDeviceCreated(teamId, deviceId, saveName, pos, upgradedId)
+    self:Load()
+end
+
+function PhysLib:OnNodeCreated(nodeId, teamId, pos, foundation, selectable, extrusion)
+    -- Just assign pos since we're using the x and y directly from that
+    pos.links = {}
+    pos.id = nodeId
+    pos.GetVelocity = function() if pos.velocity then return pos.velocity else
+            pos.velocity = NodeVelocity(nodeId)
+            return pos.velocity
+        end end
+    PhysLib.NodesRaw[nodeId] = pos
+    self:UpdateNodeTable()
+end
+
+function PhysLib:OnNodeDestroyed(nodeId, selectable)
+    local node = PhysLib.NodesRaw[nodeId]
+    local linkedToNodes = node.links
+    for otherLinkedNodeId, otherLink in pairs(linkedToNodes) do
+        otherLink.node.links[nodeId] = nil
+    end
+    PhysLib.NodesRaw[nodeId] = nil
+    self:UpdateNodeTable()
+end
+
+function PhysLib:OnNodeBroken(thisNodeId, nodeIdNew)
+    -- Step 1, clear the links from the things that the node is linked to
+    local existingNode = PhysLib.NodesRaw[thisNodeId]
+    local linkedToNodes = existingNode.links
+    for otherLinkedNodeId, otherLink in pairs(linkedToNodes) do
+        otherLink.node.links[thisNodeId] = nil
     end
 
+    -- Step 2, delete the node
+    PhysLib.NodesRaw[thisNodeId] = nil
+    -- Step 3, add the two nodes as normal
+    local nodeA = NodePosition(thisNodeId)
+    nodeA.links = {}
+    nodeA.id = thisNodeId
+    PhysLib.NodesRaw[thisNodeId] = nodeA
+    local nodeB = NodePosition(nodeIdNew)
+    nodeB.links = {}
+    nodeB.id = nodeIdNew
+    PhysLib.NodesRaw[nodeIdNew] = nodeB
+    -- Step 4, recursively readd links to the nodes
+    self:AddLinksRecursive(thisNodeId)
+    self:AddLinksRecursive(nodeIdNew)
 
-    local bestCandidate1 = filteredList[1]
-    local bestCandidate2 = filteredList[2]
-    local distanceX = (A1x + bestCandidate1 * A2SubA1x) - (B1x + bestCandidate2 * B2SubB1x)
-    local distanceY = (A1y + bestCandidate1 * A2SubA1y) - (B1y + bestCandidate2 * B2SubB1y)
-    local bestDistance = distanceX * distanceX + distanceY * distanceY
+    self:UpdateNodeTable()
+end
 
-    for i = 3, filteredListCount - 1, 2 do
-        local candidate1 = filteredList[i]
-        local candidate2 = filteredList[i + 1]
-        local distanceX = (A1x + candidate1 * A2SubA1x) - (B1x + candidate2 * B2SubB1x)
-        local distanceY = (A1y + candidate1 * A2SubA1y) - (B1y + candidate2 * B2SubB1y)
+function PhysLib:OnLinkCreated(teamId, saveName, nodeIdA, nodeIdB, pos1, pos2, extrusion)
+    local nodeA = PhysLib.NodesRaw[nodeIdA]
+    local nodeB = PhysLib.NodesRaw[nodeIdB]
 
+    nodeA.links[nodeIdB] = { node = nodeB, material = saveName }
+    nodeB.links[nodeIdA] = { node = nodeA, material = saveName }
+    self:UpdateNodeTable()
+end
 
-        local distance = distanceX * distanceX + distanceY * distanceY 
+function PhysLib:OnLinkDestroyed(teamId, saveName, nodeIdA, nodeIdB, breakType)
+    local nodeA = PhysLib.NodesRaw[nodeIdA]
+    local nodeB = PhysLib.NodesRaw[nodeIdB]
 
-        if distance < bestDistance then
-            bestCandidate1 = candidate1
-            bestCandidate2 = candidate2
-            bestDistance = distance
-        end
+    nodeA.links[nodeIdB] = nil
+    nodeB.links[nodeIdA] = nil
+    self:UpdateNodeTable()
+end
+--#endregion
+--#region Events utility
+
+function PhysLib:AddLinksRecursive(nodeId)
+    local node = PhysLib.NodesRaw[nodeId]
+
+    local linkCount = NodeLinkCount(nodeId)
+
+    for index = 0, linkCount - 1 do
+        local otherNodeId = NodeLinkedNodeId(nodeId, index)
+        local otherNode = PhysLib.NodesRaw[otherNodeId]
+        local saveName = GetLinkMaterialSaveName(nodeId, otherNodeId)
+        node.links[otherNodeId] = { node = otherNode, material = saveName }
+        otherNode.links[nodeId] = { node = node, material = saveName }
     end
-    local returnPosA = {x = A1x + bestCandidate1 * A2SubA1x, y = A1y + bestCandidate1 * A2SubA1y}
-    local returnPosB = {x = B1x + bestCandidate2 * B2SubB1x, y = B1y + bestCandidate2 * B2SubB1y}
-    return returnPosA, bestCandidate1, returnPosB, bestCandidate2, bestDistance
 end
 
-function CapsuleCollisionOnLinks(posA, posB, radius, link, results)
-    local nodeA = link.nodeA
-    local nodeB = link.nodeB
 
-    local closestPointCapsule, closestPointCapsuleTime,
-    closestPointLink, closestPointLinkTime,
-    closestDistance = ClosestPointsBetweenLines(posA, posB, nodeA, nodeB)
-    if closestDistance > radius * radius then return end
-    CircleCollisionOnLink(closestPointCapsule, radius, nodeA, nodeB, link, results, closestPointCapsuleTime)
+function PhysLib:UpdateNodeTable()
+    PhysLib.Nodes = FlattenTable(PhysLib.NodesRaw)
 end
+
+--#endregion
 --#endregion
 
 --#region Utility
-function GetLinkRectangle(nodes)
-    local huge = math.huge
-    local count = #nodes
-    local minX, minY, maxX, maxY = huge, huge, -huge, -huge
-    local averageX, averageY = 0, 0
-
-    local boundCheckInterval = 10
-    local boundCheckCounter = 9
-
-    for i = 1, count do
-        local v = nodes[i]
-        local x, y = v.x, v.y
-
-        -- Update sums for average
-        averageX = averageX + x
-        averageY = averageY + y
-
-        boundCheckCounter = boundCheckCounter + 1
-        if boundCheckCounter == boundCheckInterval then
-            boundCheckCounter = 0
-            -- Update bounds
-            minX = (x < minX) and x or minX
-            maxX = (x > maxX) and x or maxX
-
-            minY = (y < minY) and y or minY
-            maxY = (y > maxY) and y or maxY
-        end
-    end
-
-
-
-    return {
-        minX = minX,
-        minY = minY,
-        maxX = maxX,
-        maxY = maxY,
-        width = maxX - minX,
-        height = maxY - minY,
-        x = averageX / count,
-        y = averageY / count,
-        count = count
-    }
-end
-
-function GetIndiceCount(input)
-    local count = 0
-    for k, v in pairs(input) do
-        count = count + 1
-    end
-    return count
-end
-
-function GetNodeGroupExtendedFamily(nodes)
-    local extendedFamily = {}
-
-
-    for i = 1, #nodes do
-        local node = nodes[i]
-        extendedFamily[node.id] = node
-        for to, link in pairs(node.links) do
-            extendedFamily[to] = link.node
-        end
-    end
-    return extendedFamily
-end
-
-function GetAveragePosOfNodes(nodes)
-    local averageX = 0
-    local averageY = 0
-    local count = 0
-
-    for i = 1, #nodes do
-        local v = nodes[i]
-        count = count + 1
-        averageX = averageX + v.x
-        averageY = averageY + v.y
-        -- Vector addition is PAINFULLY slow
-    end
-    return { x = averageX / count, y = averageY / count }
-end
-
-function GetNodeRectanglePairs(nodes)
-    local minX = math.huge
-    local minY = math.huge
-    local maxX = -math.huge
-    local maxY = -math.huge
-
-
-    for k, v in pairs(nodes) do
-        if v.x < minX then
-            minX = v.x
-        elseif v.x > maxX then
-            maxX = v.x
-        end
-
-        if v.y < minY then
-            minY = v.y
-        elseif v.y > maxY then
-            maxY = v.y
-        end
-    end
-    local width = maxX - minX
-    local height = maxY - minY
-
-    return { minX = minX, minY = minY, maxX = maxX, maxY = maxY, width = width, height = height }
-end
-
 function HighlightExtents(extents, duration, color)
     duration = duration or 0.06
     color = color or White()
@@ -386,20 +202,19 @@ function HighlightExtents(extents, duration, color)
     SpawnLine(bottomLeft, topLeft, color, duration)
 end
 
-function HighlightCapsule(posA, posB, radius)
-    SpawnCircle(posA, radius, White(), 0.06)
-    SpawnCircle(posB, radius, White(), 0.06)
+function HighlightCapsule(posA, posB, radius, color)
+    color = color or White()
+    SpawnCircle(posA, radius, color, 0.06)
+    SpawnCircle(posB, radius, color, 0.06)
     local lineUnit = Vec2Normalize({ x = posB.x - posA.x, y = posB.y - posA.y})
     local linePerp = Vec2Perp(lineUnit)
     linePerp = Vec3(linePerp.x, linePerp.y, 0)
 
     
-    SpawnLine({x = posA.x + radius * linePerp.x, y = posA.y + radius * linePerp.y}, {x = posB.x + radius * linePerp.x, y = posB.y + radius * linePerp.y}, White(), 0.06)
-    SpawnLine({x = posA.x - radius * linePerp.x, y = posA.y - radius * linePerp.y}, {x = posB.x - radius * linePerp.x, y = posB.y - radius * linePerp.y}, White(), 0.06)
+    SpawnLine({x = posA.x + radius * linePerp.x, y = posA.y + radius * linePerp.y}, {x = posB.x + radius * linePerp.x, y = posB.y + radius * linePerp.y}, color, 0.06)
+    SpawnLine({x = posA.x - radius * linePerp.x, y = posA.y - radius * linePerp.y}, {x = posB.x - radius * linePerp.x, y = posB.y - radius * linePerp.y}, color, 0.06)
 
 end
-
-
 function FlattenTable(input)
     local output = {}
     local index = 0
@@ -410,6 +225,3 @@ function FlattenTable(input)
     return output
 end
 --#endregion
-
-
-

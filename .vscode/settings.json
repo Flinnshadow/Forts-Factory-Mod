@@ -23,7 +23,8 @@
         "SNAP_DEVICES",
         "Colour",
         "Vec3Length",
-        "FindFunctionName"
+        "FindFunctionName",
+        "AddResourcesContinuous"
     ],
     "Lua.codeLens.enable": true,
     "Lua.hint.semicolon": "All",

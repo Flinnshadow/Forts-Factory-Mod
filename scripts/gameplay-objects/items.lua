@@ -57,14 +57,9 @@ function CreateItem(pos, iType, effectId)
     -- Use existing effect or create new one
     local effectId = effectId or SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
 
-    local radius = 50 / 2
-    local definition = {
-        springConst = 400,
-        dampening = 20,
-        DynamicFriction = 4,
-        StaticFriction = 4,
-    }
-    Obj = RegisterPhysicsObject(pos, radius, Vec3(0, 0, 0), definition, effectId)
+    local radius = 50/2
+
+    Obj = RegisterPhysicsObject(pos, radius, Vec3(0, 0, 0), _, effectId)
     Obj.itemType = iType
     Obj.id = GlobalItemIterator
     ItemObjects[GlobalItemIterator] = Obj

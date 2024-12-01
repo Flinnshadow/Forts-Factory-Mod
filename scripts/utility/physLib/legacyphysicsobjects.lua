@@ -11,8 +11,6 @@ local defaultObjectDefinition = {
 }
 
 
-PhysicsObjects = {}
-PhysicsObjectsTree = {}
 
 function UpdatePhysicsObjects()
 
@@ -104,7 +102,7 @@ function ProcessPhysicsObjects()
 
 
             -- Structure filtering
-            local snapResults = CircleCollisionOnStructure(Object.pos, Object.radius)
+            local snapResults = StructureCircleCollision(Object.pos, Object.radius)
 
 
             local noBackgroundResults = {}
