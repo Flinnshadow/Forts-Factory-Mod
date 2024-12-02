@@ -5,7 +5,7 @@ GlobalItemIterator = 0
 -- Item Definitions
 ItemDefinitions = {
     [""] = {MaterialType = "Dynamo"},
-    ["IronOre"] = {MaterialType = "DefaultMaterial",CoreValue = Value(50,0)}, --ivy
+    ["IronOre"] = {MaterialType = "IronOre",CoreValue = Value(50,0)}, --ivy
     ["DirtyOre"] = {MaterialType = "Haze",CoreValue = Value(128,0)},
     ["IronPlate"] = {MaterialType = "Abrams",CoreValue = Value(128,0)},
     ["Steel"] = {MaterialType = "Bebop",CoreValue = Value(128,0)},
@@ -55,7 +55,7 @@ function CreateItem(pos, iType, effectId)
     local iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
 
     -- Use existing effect or create new one
-    local effectId = effectId or SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
+    local effectId = effectId or SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType.. GetRandomInteger(1, 3, "") ..".lua", pos, Vec3(GetRandomFloat(-1, 1, ""), GetRandomFloat(-1, 1, "")))
 
     local radius = 50/2
 

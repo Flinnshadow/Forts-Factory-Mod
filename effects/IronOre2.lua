@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "DefaultMaterial",
+        Name = "IronOre2",
 
         States =
         {
@@ -12,7 +12,7 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/ores/IronOre1" },
+                    { texture = path .. "/effects/media/ores/IronOre2" },
                     
 
                     duration = 0.04,
@@ -36,11 +36,11 @@ Effects =
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "DefaultMaterial",
+        Sprite = "IronOre2",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,
-        InitialSize = 2,
+        InitialSize = 2.5,
         ExpansionRate = 0,
         AngularVelocity = 0,
         RandomAngularVelocityMagnitude = 0,

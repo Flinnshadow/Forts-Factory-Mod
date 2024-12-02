@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "DefaultMaterial",
+        Name = "IronOre1",
 
         States =
         {
@@ -36,11 +36,11 @@ Effects =
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "DefaultMaterial",
+        Sprite = "IronOre1",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,
-        InitialSize = 2,
+        InitialSize = 2.5,
         ExpansionRate = 0,
         AngularVelocity = 0,
         RandomAngularVelocityMagnitude = 0,
