@@ -157,13 +157,17 @@ function PhysLib.BspTrees.StructureTree:CircleCast(posA, posB, radius)
     self:GetLinksCollidingWithCapsuleBranch(posA, posB, radius, PhysLib.LinksTree, results)
 
     local backgroundLessResults = {}
-
+    local portalResults = {}
     for i = 1, #results do
         if results[i].link.material == "backbracing" then continue end
+        if results[i].link.material == "portal" then
+            portalResults[#portalResults + 1] = results[i]
+            continue
+        end
         backgroundLessResults[#backgroundLessResults + 1] = results[i]
-
+        
     end
-    if #backgroundLessResults == 0 then return {} end
+    if #backgroundLessResults == 0 then return backgroundLessResults, portalResults end
     results = backgroundLessResults
     local filteredResults = {}
 
@@ -196,10 +200,10 @@ function PhysLib.BspTrees.StructureTree:CircleCast(posA, posB, radius)
     for i = 1, #finalResults do 
         local result = finalResults[i]
         local testPos = Vec2Lerp(posA, posB, result.t)
-        self:CircleCollisionOnLink(testPos, radius, result.nodeA, result.nodeB, result.link, newResults, result.t, posA)
+        self:CircleCollisionOnLink(testPos, radius, result.nodeA, result.nodeB, result.link, newResults, result.t)
     end
     newResults.t = lowestResultT
-    return newResults
+    return newResults, portalResults
 end
 
 function PhysLib.BspTrees.StructureTree:GetLinksCollidingWithCapsuleBranch(posA, posB, radius, branch, results)

@@ -41,6 +41,7 @@ function c(idA, idB, linkPos, saveName)
 end
 ---@diagnostic disable-next-line: lowercase-global
 function d(idA, idB, linkPos, material)
+    if material == "backbracing" then return true end
     local existingLinks = PhysLib.ExistingLinks
 
     if not existingLinks[idA] then
