@@ -59,7 +59,6 @@ function PhysLib:Load()
 end
 
 function PhysLib:Update(frame)
-    local startTime = GetRealTime()
     self.Render:BeforePhysicsUpdate()
 
     self.Structures:UpdateNodePositions()
@@ -77,8 +76,6 @@ function PhysLib:Update(frame)
 
     self.PhysicsObjects:Update()
     self.Render:PhysicsUpdate()
-    local endTime = GetRealTime()
-    BetterLog("Physics update took " .. (endTime - startTime) * 1000 .. "ms")
 end
 
 function PhysLib:OnUpdate()
