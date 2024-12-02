@@ -24,6 +24,14 @@ function SubdivideObjects(objects, depth)
     if count <= 1 or rect.width + rect.height < minCellSize then
 
         rect = objects[1].extents
+        for i = 1, #objects do
+            local object = objects[i]
+            local objectExtents = object.extents
+            rect.minX = (rect.minX < objectExtents.minX) and rect.minX or objectExtents.minX
+            rect.maxX = (rect.maxX > objectExtents.maxX) and rect.maxX or objectExtents.maxX
+            rect.minY = (rect.minY < objectExtents.minY) and rect.minY or objectExtents.minY
+            rect.maxY = (rect.maxY > objectExtents.maxY) and rect.maxY or objectExtents.maxY
+        end
         return {children = objects, rect = rect, deepest = true}
     end
 

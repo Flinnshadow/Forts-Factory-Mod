@@ -30,6 +30,7 @@ function PhysicsObjects:Update()
     end
     for i = 1, #objects do
         self:ProcessStructureCollisions(objects[i], delta)
+        --HighlightCapsule(objects[i].lastFramePos, objects[i].pos, objects[i].radius)
     end
 end
 
