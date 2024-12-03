@@ -2,7 +2,7 @@
 GlobalModuleIterator = 0
 ExistingModules = {}
 ExistingInserters = {}
-
+--"devices/metalstore/metal.tga"
 -- Constants
 local DEFAULT_BUFFER_SIZE = 2
 local DEFAULT_CRAFTING_TIME = 250 --10s
@@ -569,7 +569,7 @@ function Inserter:TakeOverEffect(physicsObject)
 end
 
 function Inserter:CreateItemEffect(itemType, position)
-    return SpawnEffectEx(path .. "/effects/".. ItemDefinitions[itemType].MaterialType ..".lua", position, Vec3(0, -1))
+    return SpawnEffectEx(path .. "/effects/" ..MaterialArtSet..itemType ..".lua", position, Vec3(0, -1))
 end
 
 function Inserter:ConnectToModule(module)

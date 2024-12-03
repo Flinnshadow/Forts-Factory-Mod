@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "Haze",
+        Name = "MRA_",
 
         States =
         {
@@ -12,7 +12,7 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/Haze.png" },
+                    { texture = "devices/metalstore/metal.tga" },
 
 
                     duration = 0.04,
@@ -36,7 +36,7 @@ Effects =
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "Haze",
+        Sprite = "MRA_",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,

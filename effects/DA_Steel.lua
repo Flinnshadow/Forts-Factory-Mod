@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "Dynamo",
+        Name = "Bebop",
 
         States =
         {
@@ -12,8 +12,8 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/Dynamo.png" },
-                    
+                    { texture = path .. "/effects/media/developerArt/Bebop.png" },
+
 
                     duration = 0.04,
                     blendColour = false,
@@ -36,11 +36,11 @@ Effects =
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "Dynamo",
+        Sprite = "Bebop",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,
-        InitialSize = 1.9,
+        InitialSize = 1.1,
         ExpansionRate = 0,
         AngularVelocity = 0,
         RandomAngularVelocityMagnitude = 0,

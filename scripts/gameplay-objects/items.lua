@@ -1,6 +1,7 @@
 -- Constants and Globals
 Gravity = 0
 GlobalItemIterator = 0
+MaterialArtSet = "DA_" -- "DA_": Dev art, "MRA_": Main Release Art, "TRA": Test Release Art, "SBA": SamsterBirdies Art,
 
 -- Item Definitions
 ItemDefinitions = {
@@ -55,7 +56,7 @@ function CreateItem(pos, iType, effectId)
     local iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
 
     -- Use existing effect or create new one
-    local effectId = effectId or SpawnEffectEx(path .. "/effects/".. ItemDefinitions[iType].MaterialType ..".lua", pos, Vec3(0, -1))
+    local effectId = effectId or SpawnEffectEx(path .. "/effects/" ..MaterialArtSet..iType ..".lua", pos, Vec3(0, -1))
 
     local radius = 50/2
 
