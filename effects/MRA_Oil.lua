@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "Abrams",
+        Name = "MRA_Oil",
 
         States =
         {
@@ -12,7 +12,7 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/Abrams.png" },
+                    { texture = path .. "/effects/media/developerArt/Viscous.png" },
 
 
                     duration = 0.04,
@@ -36,11 +36,11 @@ Effects =
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "Abrams",
+        Sprite = "MRA_Oil",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,
-        InitialSize = 1.9,
+        InitialSize = 0.7,
         ExpansionRate = 0,
         AngularVelocity = 0,
         RandomAngularVelocityMagnitude = 0,

@@ -222,3 +222,18 @@ function FlattenTable(input)
     return output
 end
 --#endregion
+
+
+
+
+
+-- B1 is the initial frame, B2 is the final frame
+function CollisionBetweenLinks(A1, A2, B1, B2, Radius)
+
+    -- P is the intersection point between both lines. It can be reused from ClosestPointsBetweenLines function
+    local P = A1 - (A2-A1) * (Vec3Dot(A1-B1, A2-A1)*Vec3Dot(B2-B1, B2-B1) - Vec3Dot(A1-B1, B2-B1)*Vec3Dot(A2-A1, B2-B1)) / (Vec2Cross(A2-A1, B2-B1)*Vec2Cross(A2-A1, B2-B1))
+
+    local result = P + Radius * (B1-B2)*Vec3Dot(A2-A1, A2-A1) / Vec3Length((A2-A1)*Vec3Dot(B1-B2, A2-A1) - (B1-B2)*Vec3Dot(A2-A1, A2-A1))
+
+    return result;
+end

@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "MoAndKrill",
+        Name = "MRA_IronPlate",
 
         States =
         {
@@ -12,8 +12,8 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/MoAndKrill.png" },
-
+                    { texture = "effects/media/shuttle_gear.dds" },
+                    
 
                     duration = 0.04,
                     blendColour = false,
@@ -32,15 +32,15 @@ Effects =
     {
         Type = "sprite",
         TimeToTrigger = 0,
-        LocalPosition = { x = 0, y = 0, z = -0.1 },
+        LocalPosition = { x = 0, y = 13, z = -0.1 },
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "MoAndKrill",
+        Sprite = "MRA_IronPlate",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,
-        InitialSize = 1.9,
+        InitialSize = 1.2,
         ExpansionRate = 0,
         AngularVelocity = 0,
         RandomAngularVelocityMagnitude = 0,

@@ -1,6 +1,7 @@
 -- Constants and Globals
 Gravity = 0
 GlobalItemIterator = 0
+MaterialArtSet = "DA_" -- "DA_": Dev art, "MRA_": Main Release Art, "TRA": Test Release Art, "SBA": SamsterBirdies Art,
 
 -- Item Definitions
 ItemDefinitions = {

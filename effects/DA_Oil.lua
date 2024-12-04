@@ -12,7 +12,7 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/Viscous.png" },
+                    { texture = path .. "/effects/media/developerArt/Viscous.png" },
 
 
                     duration = 0.04,

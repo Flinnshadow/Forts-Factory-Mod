@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "Bebop",
+        Name = "MRA_Ammo2",
 
         States =
         {
@@ -12,8 +12,8 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/Bebop.png" },
-                    
+                    { texture = path .. "/effects/media/developerArt/MoAndKrill.png" },
+
 
                     duration = 0.04,
                     blendColour = false,
@@ -36,11 +36,11 @@ Effects =
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "Bebop",
+        Sprite = "MRA_Ammo2",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,
-        InitialSize = 1.1,
+        InitialSize = 1.9,
         ExpansionRate = 0,
         AngularVelocity = 0,
         RandomAngularVelocityMagnitude = 0,
