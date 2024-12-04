@@ -293,7 +293,7 @@ function PhysLib.BspTrees.ObjectTree:GetObjectsCollidingWithObject(object, objec
         local timeObject, timeOther, closestDistance = Helper:ClosestPointsBetweenLines(objectA1, objectA2, objectB1, objectB2)
         
         if closestDistance < requiredDistance then
-            table.insert(results, { object = otherObject, timeObject = timeObject, timeOther = timeOther, requiredDistance = requiredDistance})
+            results[#results + 1] = { object = otherObject, timeObject = timeObject, timeOther = timeOther, requiredDistance = requiredDistance}
         end
     end
 end
