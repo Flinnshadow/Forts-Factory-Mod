@@ -200,7 +200,7 @@ function PhysLib.BspTrees.StructureTree:CircleCast(posA, posB, radius)
     for i = 1, #finalResults do 
         local result = finalResults[i]
         local testPos = Vec2Lerp(posA, posB, result.t)
-        self:CircleCollisionOnLink(testPos, radius, result.nodeA, result.nodeB, result.link, newResults, result.t)
+        self:CircleCollisionOnLink(testPos, radius, result.nodeA, result.nodeB, result.link, newResults, result.t, posA)
     end
     newResults.t = lowestResultT
     return newResults, portalResults
@@ -380,6 +380,14 @@ end
 
 
 
+function HighlightUnitVector(pos, direction, mag, col)
+    pos.z = -100
+    col = col or {r = 255, g = 255, b= 255, a = 255}
+    local pos2 = Vec3( pos.x + direction.x * mag, pos.y + direction.y * mag, -100)
+    SpawnLine(pos, pos2, col, data.updateDelta * 1.2)
+    SpawnCircle(pos, Vec3Dist(pos, pos2) / 5, col, data.updateDelta * 1.2)
+end
+
 function PhysLib.BspTrees.StructureTree:CircleCollisionOnLink(position, radius, nodeA, nodeB, link, results, time, normalCalcPos)
     -- --SpawnLine(node, link.node, White(), 0.06)
 
@@ -418,8 +426,20 @@ function PhysLib.BspTrees.StructureTree:CircleCollisionOnLink(position, radius, 
         local dist = math.sqrt(posToNodeASquaredX + posToNodeASquaredY)
         local linkNormalX = -posToNodeAX / dist
         local linkNormalY = -posToNodeAY / dist
-        results[#results + 1] = { nodeA = nodeA, nodeB = nodeB, normal = { x = linkNormalX, y = linkNormalY }, pos = { x = nodeA.x, y = nodeA.y }, distance =
-        dist, material = link.material, type = 2, t = 0, testPos = position, time = time }
+        results[#results + 1] = { 
+            nodeA = nodeA, 
+            nodeB = nodeB, 
+            normal = { x = linkNormalX, y = linkNormalY }, 
+            pos = { x = nodeA.x, y = nodeA.y }, 
+            distance = dist, 
+            material = link.material, 
+            type = 2, 
+            t = 0, 
+            testPos = position, 
+            time = time 
+        }
+        -- SpawnCircle(nodeA, 15, Blue(), 0.04)
+        -- HighlightUnitVector( { x = nodeA.x, y = nodeA.y }, { x = linkNormalX, y = linkNormalY }, 20, Blue())
         return
     end
     if (crossDistToNodeB < 0) then
@@ -429,8 +449,20 @@ function PhysLib.BspTrees.StructureTree:CircleCollisionOnLink(position, radius, 
         local dist = math.sqrt(posToNodeBSquaredX + posToNodeBSquaredY)
         local linkNormalX = -posToNodeBX / dist
         local linkNormalY = -posToNodeBY / dist
-        results[#results + 1] = { nodeA = nodeA, nodeB = nodeB, normal = { x = linkNormalX, y = linkNormalY }, pos = { x = nodeB.x, y = nodeB.y }, distance =
-        dist, material = link.material, type = 2, t = 1, testPos = position, time = time }
+        results[#results + 1] = { 
+            nodeA = nodeA, 
+            nodeB = nodeB, 
+            normal = { x = linkNormalX, y = linkNormalY }, 
+            pos = { x = nodeB.x, y = nodeB.y }, 
+            distance = dist, 
+            material = link.material, 
+            type = 2, 
+            t = 1, 
+            testPos = position, 
+            time = time 
+        }
+        -- SpawnCircle(nodeB, 15, Blue(), 0.04)
+        -- HighlightUnitVector( { x = nodeB.x, y = nodeB.y }, { x = linkNormalX, y = linkNormalY }, 20, Blue())
         return
     end
 
@@ -445,7 +477,6 @@ function PhysLib.BspTrees.StructureTree:CircleCollisionOnLink(position, radius, 
         linkNormalX = -linkNormalX
         linkNormalY = -linkNormalY
     end
-
     if normalCalcPos then -- use the normal calc position to calculate the normal
         local nodeAToNormalCalcX = normalCalcPos.x - nodeAX
         local nodeAToNormalCalcY = normalCalcPos.y - nodeAY
@@ -479,6 +510,9 @@ function PhysLib.BspTrees.StructureTree:CircleCollisionOnLink(position, radius, 
             t = t, 
             testPos = position, 
             time = time }
+        -- SpawnCircle(nodeA, 15, White(), 0.04)
+        -- SpawnCircle(nodeB, 15, White(), 0.04)
+        -- HighlightUnitVector( { x = posX, y = posY }, { x = linkNormalX, y = linkNormalY }, 20, Blue())
         return
     end
 end

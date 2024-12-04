@@ -29,8 +29,9 @@ function PhysicsObjects:Update()
         self:FinalIntegration(objects[i], delta)
     end
     for i = 1, #objects do
+        -- HighlightCapsule(objects[i].lastFramePos, objects[i].pos, objects[i].radius)
         self:ProcessStructureCollisions(objects[i], delta)
-        --HighlightCapsule(objects[i].lastFramePos, objects[i].pos, objects[i].radius)
+        -- HighlightCapsule(objects[i].lastFramePos, objects[i].pos, objects[i].radius, Red())
     end
 end
 
