@@ -77,7 +77,39 @@ end
 
 function OnLinkCreated(teamId, saveName, nodeIdA, nodeIdB, pos1, pos2, extrusion)
     PhysLib:OnLinkCreated(teamId, saveName, nodeIdA, nodeIdB, pos1, pos2, extrusion)
+
+    ClearStructureAroundConveyors(teamId, saveName, nodeIdA, nodeIdB)
+    
 end
+
+function ClearStructureAroundConveyors(teamId, saveName, nodeIdA, nodeIdB)
+    if LinkDefinitions[saveName] and LinkDefinitions[saveName].Conveyor then
+        local nodeA = PhysLib.NodesRaw[nodeIdA]
+        local nodeB = PhysLib.NodesRaw[nodeIdB]
+        local nodeBToNodeA = nodeB - nodeA
+        local length = math.sqrt(nodeBToNodeA.x * nodeBToNodeA.x + nodeBToNodeA.y * nodeBToNodeA.y)
+        local normal = Vec3(nodeBToNodeA.y, -nodeBToNodeA.x)
+        if normal.y < 0 then normal = -normal end
+        normal = normal / length
+        ConvertLinksAboveNode(nodeA, normal, nodeIdA, teamId)
+        ConvertLinksAboveNode(nodeB, normal, nodeIdB, teamId)
+    end
+end
+
+function ConvertLinksAboveNode(node, normal, nodeId, teamId)
+    for _, link in pairs(node.links) do
+        if link.material ~= "bracing" then continue end
+        local dir = node - link.node
+        local length = math.sqrt(dir.x * dir.x + dir.y * dir.y)
+        dir = dir / length
+
+        local dot = dir.x * normal.x + dir.y * normal.y
+        if dot > 0.5 then
+            CreateLink(teamId, "backbracing", nodeId, link.node.id)
+        end
+    end
+end
+
 
 function OnLinkDestroyed(teamId, saveName, nodeIdA, nodeIdB, breakType)
     PhysLib:OnLinkDestroyed(teamId, saveName, nodeIdA, nodeIdB, breakType)
