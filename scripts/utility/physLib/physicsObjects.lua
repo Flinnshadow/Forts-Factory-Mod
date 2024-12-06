@@ -55,12 +55,14 @@ end
 
 function PhysicsObjects:ProcessObjectCollisions(object, delta)
 
-    local objectResults = ObjectTree:ObjectCast(object)
+    local objectResults = ObjectTree:SolveCollisions(object)
+
 
     local posChange = {}
     local velChange = {}
     for i = 1, #objectResults do
-        self:ProcessObjectCollisionResult(object, objectResults[i], posChange, velChange, delta)
+        local result = objectResults[i]
+        self:ProcessObjectCollisionResult(object, result, posChange, velChange, delta)
     end
     object.posChange = posChange
     object.velChange = velChange
@@ -86,14 +88,24 @@ end
 function PhysicsObjects:ProcessObjectCollisionResult(objectA, result, posChange, velChange, delta)
     --delta = 1 / delta
     local objectB = result.object
-    local distance = result.distance
-    if distance == 0 then return end
-    local normal = result.normal
 
-    local displacement = (objectA.radius + objectB.radius - distance)
+    local displacement = result.displacement
 
-    local displacementX = displacement * normal.x
-    local displacementY = displacement * normal.y
+    local displacementX = displacement.x
+    local displacementY = displacement.y
+
+    local displacementXSign = displacementX > 0 and 1 or -1
+    local displacementYSign = displacementY > 0 and 1 or -1
+
+    local displacementXAbs = displacementX * displacementXSign
+    local displacementYAbs = displacementY * displacementYSign
+
+
+    local totalRadius = (objectA.radius + objectB.radius)
+    displacementX = math.max(0,totalRadius - displacementXAbs) * displacementXSign
+    displacementY = math.max(0,totalRadius - displacementYAbs) * displacementYSign
+
+    if displacementX == 0 and displacementY == 0 then return end
 
     local posChangeLocal = { x = displacementX / 2, y = displacementY / 2 }
 
@@ -288,7 +300,7 @@ end
 
 local defaultObjectDefinition = {
 
-    springConst = 3,
+    springConst = 2.2,
     dampening = 0.45,
     DynamicFriction = 4,
     StaticFriction = 4,

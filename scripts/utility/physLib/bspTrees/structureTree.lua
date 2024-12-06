@@ -206,6 +206,46 @@ function PhysLib.BspTrees.StructureTree:CircleCast(posA, posB, radius)
     return newResults, portalResults
 end
 
+
+local function GetCircleCollidingWithLine(pos, radius, lineA, lineB)
+    local radiusSquared = radius * radius
+
+    -- Line vector
+    local lineVecX = lineB.x - lineA.x
+    local lineVecY = lineB.y - lineA.y
+
+    -- Vector from lineA to circle center
+    local lineToCircleX = pos.x - lineA.x
+    local lineToCircleY = pos.y - lineA.y
+
+    -- Line segment length squared
+    local lineLengthSquared = lineVecX * lineVecX + lineVecY * lineVecY
+    if lineLengthSquared == 0 then
+        -- Line segment is a point; check distance to this point
+        local distSquared = lineToCircleX * lineToCircleX + lineToCircleY * lineToCircleY
+        return distSquared <= radiusSquared
+    end
+
+    local t = (lineToCircleX * lineVecX + lineToCircleY * lineVecY) / lineLengthSquared
+    t = t < 0 and 0 or t > 1 and 1 or t
+
+    -- Closest point on the line segment
+    local closestX = lineA.x + t * lineVecX
+    local closestY = lineA.y + t * lineVecY
+
+    -- Vector from closest point to circle center
+    local closestToCircleX = pos.x - closestX
+    local closestToCircleY = pos.y - closestY
+
+    -- Squared distance from circle center to closest point
+    local distanceSquared = closestToCircleX * closestToCircleX + closestToCircleY * closestToCircleY
+
+    -- Check collision
+    return distanceSquared <= radiusSquared
+end
+local function CircleCollidingWithRect(pos, radius, rect)
+    return pos.x > rect.minX - radius and pos.x < rect.maxX + radius and pos.y > rect.minY - radius and pos.y < rect.maxY + radius
+end
 function PhysLib.BspTrees.StructureTree:GetLinksCollidingWithCapsuleBranch(posA, posB, radius, branch, results)
     if not branch then return end
     if branch.deepest then
