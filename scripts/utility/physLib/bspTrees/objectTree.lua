@@ -26,11 +26,12 @@ function SubdivideObjects(objects, depth)
         rect = objects[1].extents
         for i = 1, #objects do
             local object = objects[i]
-            local objectExtents = object.extents
-            rect.minX = (rect.minX < objectExtents.minX) and rect.minX or objectExtents.minX
-            rect.maxX = (rect.maxX > objectExtents.maxX) and rect.maxX or objectExtents.maxX
-            rect.minY = (rect.minY < objectExtents.minY) and rect.minY or objectExtents.minY
-            rect.maxY = (rect.maxY > objectExtents.maxY) and rect.maxY or objectExtents.maxY
+            local objectPos = object.pos
+            local objectRadius = object.radius
+            rect.minX = (rect.minX < objectPos.x - objectRadius) and rect.minX or objectPos.x - objectRadius
+            rect.maxX = (rect.maxX > objectPos.x + objectRadius) and rect.maxX or objectPos.x + objectRadius
+            rect.minY = (rect.minY < objectPos.y - objectRadius) and rect.minY or objectPos.y - objectRadius
+            rect.maxY = (rect.maxY > objectPos.y + objectRadius) and rect.maxY or objectPos.y + objectRadius
         end
         return {children = objects, rect = rect, deepest = true}
     end
@@ -187,6 +188,16 @@ function GetObjectRectangle(objects)
 end
 
 --#endregion
+
+function PhysLib.BspTrees.ObjectTree:SolveCollisions(object)
+    local results = {}
+    local posX = object.pos.x
+    local posY = object.pos.y
+    local radius = object.radius
+    self:GetObjectsCollidingWithObjectBranch(object, self.ObjectsTree, posX, posY, radius, results)
+    return results
+end
+
 --#region CircleCast
 function PhysLib.BspTrees.ObjectTree:ObjectCast(object)
     local results = {}
@@ -257,7 +268,10 @@ function PhysLib.BspTrees.ObjectTree:ObjectCast(object)
 end
 
 
-function PhysLib.BspTrees.ObjectTree:GetObjectsCollidingWithObjectBranch(object, branch, results)
+function PhysLib.BspTrees.ObjectTree:GetObjectsCollidingWithObjectBranch(object, branch, posX, posY, radius, results)
+
+
+
     if not branch then return end
     if branch.deepest then
         -- Deepest level: Test if within the bounding squares of individual nodes
@@ -273,8 +287,9 @@ function PhysLib.BspTrees.ObjectTree:GetObjectsCollidingWithObjectBranch(object,
         local childBranch = children[i]
         if not childBranch then continue end
         local childRect = childBranch.rect
-        if Helper:LineCollidesWithRect(object.lastFramePos, object.pos, object.radius, childRect) then
-            self:GetObjectsCollidingWithObjectBranch(object, childBranch, results)
+        
+        if childRect.minX - radius < posX and childRect.maxX + radius > posX and childRect.minY - radius < posY and childRect.maxY + radius > posY then
+            self:GetObjectsCollidingWithObjectBranch(object, childBranch, posX, posY, radius, results)
         end
     end
 end
@@ -283,18 +298,18 @@ function PhysLib.BspTrees.ObjectTree:GetObjectsCollidingWithObject(object, objec
     for i = 1, #objects do
         local otherObject = objects[i]
         if otherObject == object then continue end
-
-        local objectA1 = object.lastFramePos
-        local objectA2 = object.pos
-        local objectB1 = otherObject.lastFramePos
-        local objectB2 = otherObject.pos
+        local objectPos = object.pos
+        local otherObjectPos = otherObject.pos
+        
         local combinedRadius = object.radius + otherObject.radius
         local requiredDistance = combinedRadius * combinedRadius
-        local timeObject, timeOther, closestDistance = Helper:ClosestPointsBetweenLines(objectA1, objectA2, objectB1, objectB2)
-        
-        if closestDistance < requiredDistance then
-            results[#results + 1] = { object = otherObject, timeObject = timeObject, timeOther = timeOther, requiredDistance = requiredDistance}
+        local objectAToBX = objectPos.x - otherObjectPos.x
+        local objectAToBY = objectPos.y - otherObjectPos.y
+        local distance = objectAToBX * objectAToBX + objectAToBY * objectAToBY
+        if distance < requiredDistance then
+            results[#results + 1] = {object = otherObject, displacement = {x = objectAToBX, y = objectAToBY}, distanceSquared = distance}
         end
+
     end
 end
 --#endregion
