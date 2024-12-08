@@ -227,7 +227,6 @@ function UpdateModules()
         if module.deviceId then
             -- Get device position
             local pos = GetDevicePosition(module.deviceId)
-            -- Adjust the angle by adding π/2 radians (90 degrees) to orient upwards
             local angle = GetDeviceAngle(module.deviceId) - 1.57079633
 
             -- Helper function to update buffer positions

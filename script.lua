@@ -7,7 +7,7 @@ dofile(path .. "/scripts/gameplay-objects/items.lua")
 dofile(path .. "/scripts/gameplay-objects/modules.lua")
 
 dofile(path .. "/scripts/utility/physLib/physLib.lua")
-DebugMode = true
+DebugMode = false
 
 
 function Load()
