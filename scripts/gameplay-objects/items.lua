@@ -5,15 +5,15 @@ MaterialArtSet = "DA_" -- "DA_": Dev art, "MRA_": Main Release Art, "TRA": Test 
 
 -- Item Definitions
 ItemDefinitions = {
-    [""] = {MaterialType = "Dynamo"},
-    ["IronOre"] = {MaterialType = "IronOre",CoreValue = Value(50,0)}, --ivy
-    ["DirtyOre"] = {MaterialType = "Haze",CoreValue = Value(128,0)},
-    ["IronPlate"] = {MaterialType = "Abrams",CoreValue = Value(128,0)},
-    ["Steel"] = {MaterialType = "Bebop",CoreValue = Value(128,0)},
-    ["Oil"] = {MaterialType = "Viscous",CoreValue = Value(0,100)},
-    ["SulfuricAcid"] = {MaterialType = "Viscous",CoreValue = Value(0,100)},
-    ["Ammo"] = {MaterialType = "meowginnis",CoreValue = Value(128,0)},
-    ["Ammo2"] = {MaterialType = "MoAndKrill",CoreValue = Value(128,0)},
+    [""] =              {VariantCount=1,                                    },
+    ["IronOre"] =       {VariantCount=3,            CoreValue = Value(50,0) }, --ivy
+    ["DirtyOre"] =      {VariantCount=1,            CoreValue = Value(128,0)},
+    ["IronPlate"] =     {VariantCount=1,            CoreValue = Value(128,0)},
+    ["Steel"] =         {VariantCount=1,            CoreValue = Value(128,0)},
+    ["Oil"] =           {VariantCount=1,            CoreValue = Value(0,100)},
+    ["SulfuricAcid"] =  {VariantCount=1,            CoreValue = Value(0,100)},
+    ["Ammo"] =          {VariantCount=1,            CoreValue = Value(128,0)},
+    ["Ammo2"] =         {VariantCount=1,            CoreValue = Value(128,0)},
 }
 
 -- TODO: move to it's own file
@@ -53,10 +53,12 @@ ItemObjectLifeSpans = {}
 -- Item Creation and Destruction
 function CreateItem(pos, iType, effectId)
     GlobalItemIterator = GlobalItemIterator + 1
-    local iType = (iType and ItemDefinitions[iType] and ItemDefinitions[iType].MaterialType) and iType or ""
+
+    local iType = (iType and ItemDefinitions[iType]) and iType or ""
+
 
     -- Use existing effect or create new one
-    local effectId = effectId or SpawnEffectEx(path .. "/effects/" ..MaterialArtSet..iType ..".lua".. GetRandomInteger(1, 3, "") ..".lua", pos, Vec3(GetRandomFloat(-1, 1, ""), GetRandomFloat(-1, 1, "")))
+    local effectId = effectId or SpawnEffectEx(path .. "/effects/" ..MaterialArtSet..iType.. GetRandomInteger(1, ItemDefinitions[iType].VariantCount or 1, "") ..".lua", pos, Vec3(GetRandomFloat(-1, 1, ""), GetRandomFloat(-1, 1, "")))
 
     local radius = 50/2
 

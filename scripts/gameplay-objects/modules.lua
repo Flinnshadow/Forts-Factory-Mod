@@ -569,7 +569,7 @@ function Inserter:TakeOverEffect(physicsObject)
 end
 
 function Inserter:CreateItemEffect(itemType, position)
-    return SpawnEffectEx(path .. "/effects/" ..MaterialArtSet..itemType ..".lua", position, Vec3(0, -1))
+    return SpawnEffectEx(path .. "/effects/" ..MaterialArtSet..itemType .. GetRandomInteger(1, ItemDefinitions[itemType].VariantCount or 1,"")..".lua", position, Vec3(0, -1))
 end
 
 function Inserter:ConnectToModule(module)
