@@ -1,88 +1,57 @@
 -- Global state
 GlobalModuleIterator = 0
-ExistingModules = {}
+ExistingFloatingModules = {}
+ExistingDeviceModules = {}
 ExistingInserters = {}
 --"devices/metalstore/metal.tga"
 -- Constants
 local DEFAULT_BUFFER_SIZE = 2
-local DEFAULT_CRAFTING_TIME = 250 --10s
+local DEFAULT_CRAFTING_TIME = 250 --10s TODO: Multi by 25 done not at recipe set
 local DEFAULT_INSERTER_SPEED = 10
 local DEFAULT_ITEM_SPACING = 0.2
 
 ModuleCreationDefinitions = {
     ["derrick"] = function (newModule)
         newModule:AddOutputBuffer(12,"Oil",Vec3(-40,-250))
-        newModule:SetRecipe({
-            baseTime = 10,
-            inputs = {},
-            outputs = {["Oil"] = 6}
-        })
+        newModule:SetRecipe(Recipes.derrick.oil)
     end,
     ["mine"] = function (newModule)
         newModule:AddOutputBuffer(2,"IronOre",Vec3(-25,-110))
-        newModule:SetRecipe({
-            baseTime = 16,
-            inputs = {},
-            outputs = {["IronOre"] = 1}
-        })
+        newModule:SetRecipe(Recipes.mine.ore)
     end,
-    ["mine2"] = {
-        function (newModule)
-            newModule:AddOutputBuffer(2,"IronOre",Vec3(-25,-110))
-            newModule:SetRecipe({
-                baseTime = 11, --12 == ~1.333x
-                inputs = {},
-                outputs = {["IronOre"] = 1}
-            })
-        end,
-    },
+    ["mine2"] = function (newModule)
+        newModule:AddOutputBuffer(2,"IronOre",Vec3(-25,-110))
+        newModule:SetRecipe(Recipes.mine2.ore)
+    end,
     ["furnace"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(0, -1000), Vec3(100, 100)), {x = 0, y = -70})
+        newModule:AddInputBuffer(4, {"IronOre"}, Hitbox:New(basePos + Vec3(0, -1000), Vec3(100, 100)), {x = 0, y = -70})
         newModule:AddOutputBuffer(2, "IronPlate", {x = -30, y = 20})
         newModule:AddOutputBuffer(0, "", {x = 30, y = 20})
-        newModule:SetRecipe({
-            baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
-            inputs = {["IronOre"] = 2},
-            outputs = {["IronPlate"] = 1},
-            consumption = Value(0,-10/25),
-        })
+        newModule:SetRecipe(Recipes.furnace.ironPlate)
     end,
     ["steelfurnace"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronOre"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = -70})
+        newModule:AddInputBuffer(4, {"IronOre"}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = -70})
         newModule:AddOutputBuffer(2, "IronPlate", {x = -30, y = 20})
         newModule:AddOutputBuffer(0, "", {x = 30, y = 20})
-        newModule:SetRecipe({
-            baseTime = 18,
-            inputs = {["IronOre"] = 2},
-            outputs = {["IronPlate"] = 1},
-            consumption = Value(0,-12/25),
-        })
+        newModule:SetRecipe(Recipes.steelfurnace.ironPlate)
     end,
     ["chemicalplant"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronPlate"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "SulfuricAcid", {x = 0, y = 0})
-        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
-        newModule:SetRecipe({
-            baseTime = 15,
-            inputs = {["IronPlate"] = 1},
-            outputs = {["SulfuricAcid"] = 10},
-        })
+        newModule:AddInputBuffer(4, {"IronPlate"}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 50})
+        newModule:AddOutputBuffer(2, "SulfuricAcid", {x = 30, y = 0})
+        newModule:AddOutputBuffer(0, "", {x = -30, y = 0})
+        newModule:SetRecipe(Recipes.chemicalplant.sulfuricAcid)
     end,
     ["constructor"] = function (newModule, deviceId)
         local basePos = GetDevicePosition(deviceId)
-        newModule:AddInputBuffer(4, {["IronPlate"] = true}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = 0})
-        newModule:AddOutputBuffer(2, "Ammo", {x = 0, y = 0})
-        newModule:AddOutputBuffer(0, "", {x = 0, y = 0})
-        newModule:SetRecipe({
-            baseTime = 20,
-            inputs = {["IronPlate"] = 1},
-            outputs = {["Ammo"] = 2},
-        })
+        newModule:AddInputBuffer(4, {"IronPlate"}, Hitbox:New(basePos + Vec3(1, 0), Vec3(100, 100)), {x = 0, y = -100}) --{["IronPlate"] = true} 
+        newModule:AddOutputBuffer(2, "Ammo", {x = 30, y = 0})
+        newModule:AddOutputBuffer(0, "", {x = -30, y = 0})
+        newModule:SetRecipe(Recipes.constructor.ammo)
     end,
-    ["inserter"] = {
+    ["inserter"] = { -- Not going to be a module, different system entirely, normal modules are not going to support 2x device/link connections NOTE: May be fine to make conveyors have a module for connecting too lol
 
     },
 }
@@ -97,27 +66,31 @@ ModuleCreationDefinitions = {
 --baseTime = 22 iron, baseTime2 = 30 = dirtyIron, baseTime3 = 40, slag}
 ]]
 
-function OnDeviceCompleted(teamId, deviceId, saveName)
-    if ModuleCreationDefinitions[saveName] then
-        CreateModule(saveName,deviceId)
-    end
-end
 
-function OnDeviceDestroyed(teamId, deviceId, saveName)
-    DestroyModule(deviceId)
-end
-function OnDeviceDeleted(teamId, deviceId, saveName, nodeA, nodeB, t)
-    DestroyModule(deviceId)
-end
+--ModuleIndexMap = {} -- deviceId -> index lookup
 
-function CreateModule(deviceName,deviceId) --Externally referred to as a device, alternative names for the virtual devices: Construct, Structure, Facility
+function CreateModule(deviceName,deviceId) --Externally referred to as a device; alternative names for the virtual devices: Construct, Structure, Facility
     local newModule = Module:New(deviceId)
     ModuleCreationDefinitions[deviceName](newModule,deviceId)
-    table.insert(ExistingModules, newModule)
+    table.insert(ExistingDeviceModules, newModule)
+    --    ModuleIndexMap[deviceId] = #ExistingModules
 end
 
 function DestroyModule(deviceId)
-    for i, module in ipairs(ExistingModules) do
+    --[[local index = ModuleIndexMap[deviceId]
+    if index then
+        local module = ExistingModules[index]
+        -- drop items
+        
+        -- Update index map for shifted modules
+        for i = index + 1, #ExistingModules do
+            ModuleIndexMap[ExistingModules[i].deviceId] = i - 1
+        end
+        
+        table.remove(ExistingModules, index)
+        ModuleIndexMap[deviceId] = nil
+    end]]
+    for i, module in ipairs(ExistingDeviceModules) do
         if module.deviceId == deviceId then
             local pos = GetDevicePosition(deviceId)
             local angle = GetDeviceAngle(deviceId) - 1.57079633
@@ -161,7 +134,7 @@ function DestroyModule(deviceId)
             end
 
             -- Remove module from ExistingModules
-            table.remove(ExistingModules, i)
+            table.remove(ExistingDeviceModules, i)
             break
         end
     end
@@ -220,7 +193,8 @@ function UpdateModules()
 end]]
 function UpdateModules()
     -- Update Modules
-    for _, module in pairs(ExistingModules) do
+    for _, module in pairs(ExistingDeviceModules) do
+        module:UpdateState()
         module:GrabItemsAutomatically()
         module:UpdateCrafting()
 
@@ -315,17 +289,20 @@ function UpdateModules()
         end
     end
 end
+
 -- Module Class Definition
 Module = {
     id = 0,
     deviceId = 0,
     teamId = 0,
+    position = Vec3(250), -- if default is ever used somehow I would like to know
+    angle = 0,
     inputBuffers = {},
     outputBuffers = {},
     connectedInserters = {},
     craftingTime = 0,
-    currentRecipe = nil,
     baseCraftingTime = DEFAULT_CRAFTING_TIME,
+    currentRecipe = nil,
     isGroundDevice = false,
 }
 
@@ -340,6 +317,8 @@ function Module:New(deviceId)
     module.deviceId = deviceId
     module.teamId = GetDeviceTeamIdActual(deviceId)
     module.isGroundDevice = IsGroundDevice(deviceId)
+    module.position = GetDevicePosition(deviceId)
+    module.angle = GetDeviceAngle(deviceId) - 1.57079633
     module.inputBuffers = {}
     module.outputBuffers = {}
     module.connectedInserters = {}
@@ -347,14 +326,15 @@ function Module:New(deviceId)
     return module
 end
 
-function Module:AddInputBuffer(bufferSize, itemTypes, hitbox, relativePosition)
+function Module:AddInputBuffer(bufferSize, itemType, hitbox, relativePosition)
     local buffer = {
         maxSize = bufferSize or DEFAULT_BUFFER_SIZE,
         items = {},
-        itemTypes = itemTypes or {},
+        itemType = itemType or "",
         hitbox = hitbox or Hitbox:New(GetDevicePosition(self.deviceId), Vec3(100, 100)),
         inserterAttached = false,
-        relativePosition = relativePosition or {x = 0, y = 0}
+        relativePosition = relativePosition or {x = 0, y = 0},
+        position = {x=0,y=0,z=0},
     }
     table.insert(self.inputBuffers, buffer)
 end
@@ -363,8 +343,9 @@ function Module:AddOutputBuffer(bufferSize, itemType, relativePosition)
     local buffer = {
         maxSize = bufferSize or DEFAULT_BUFFER_SIZE,
         items = {},
-        itemType = itemType,
-        relativePosition = relativePosition or {x = 0, y = 0}
+        itemType = itemType or "",
+        relativePosition = relativePosition or {x = 0, y = 0},
+        position = {x=0,y=0,z=0},
     }
     table.insert(self.outputBuffers, buffer)
 end
@@ -379,15 +360,16 @@ function Module:SetRecipe(recipe)
     local i = 1
     for inputItem, _ in pairs(recipe.inputs) do
         local buffer = self.inputBuffers[i]
-        if buffer then
-            buffer.itemTypes[inputItem] = true
-            for j = #buffer.items, 1, -1 do
-                if not buffer.itemTypes[buffer.items[j]] then
-                    table.remove(buffer.items, j)
-                end
+        if not buffer then Notice("Recipe has too many inputs for module; Setting to empty") self:SetRecipe(Recipes.empty) return end
+        if buffer.itemType ~= inputItem then buffer.itemType = inputItem
+        --Tell Inserter That its Output Has changed
+        for j = #buffer.items, 1, -1 do
+            for _, item in ipairs(buffer.items) do
+                table.remove(buffer.items, j)
+                CreateItem(buffer.position, item)
             end
-        else
-            Notice("Recipe has too many inputs for module")
+
+            end
         end
         i = i + 1
     end
@@ -396,74 +378,71 @@ function Module:SetRecipe(recipe)
     local k = 1
     for outputItem, _ in pairs(recipe.outputs) do
         local buffer = self.outputBuffers[k]
-        if buffer then
-            buffer.itemType = outputItem
-            for l = #buffer.items, 1, -1 do
-                if buffer.items[l] ~= outputItem then
-                    table.remove(buffer.items, l)
-                end
+        if not buffer then Notice("Recipe has too many outputs for module; Setting to empty") self:SetRecipe(Recipes.empty) return end
+
+        buffer.itemType = outputItem
+        for l = #buffer.items, 1, -1 do
+            if buffer.items[l] ~= outputItem then
+                table.remove(buffer.items, l)
             end
-        else
-            Notice("Recipe has too many outputs for module")
         end
+
         k = k + 1
     end
 end
+
+--TODO: Pipes, likely just set priority per output and then full. Surplus: recipue based Per item surpluss, per all overload surpluss, Active Modules table? (if no output, if no input)
+--
+
 --[[
 Module input buffers must be able to contain multiple item types at once, make inserters check for each type that the connected module wants and the recipe to properly set the input buffers item types
 ]]
 function Module:UpdateCrafting()
-    if not self.currentRecipe then return end
+    local currentRecipe = self.currentRecipe
+    if not currentRecipe then return end
 
-    -- Check if there are enough inputs to consume
-    for input, required in pairs(self.currentRecipe.inputs) do
+    local surplusFactor = 1
+    -- Check if there are enough inputs to consume then find surplus factor
+    for input, required in pairs(currentRecipe.inputs) do
         local inputBuffer = self:FindBuffer("input", input)
-        if #inputBuffer.items < required then
+        local itemCount = #inputBuffer.items
+        if itemCount < required then
             return -- Halt crafting due to insufficient input items
+        elseif currentRecipe.surplusFactors[input] then
+            surplusFactor = surplusFactor + currentRecipe.surplusFactors[input] * itemCount-required / required
         end
+
     end
 
     -- Check if output buffers have space for the recipe outputs
-    for output, quantity in pairs(self.currentRecipe.outputs) do
+    for output, quantity in pairs(currentRecipe.outputs) do
         local outputBuffer = self:FindBuffer("output", output)
         if #outputBuffer.items + quantity > outputBuffer.maxSize then
             return -- Halt crafting due to full output buffer
         end
     end
 
-    -- Calculate crafting time reduction based on surplus items
-    local surplusFactor = 1
-    for input, required in pairs(self.currentRecipe.inputs) do
-        local inputBuffer = self:FindBuffer("input", input)
-        local surplus = #inputBuffer.items - required
-        if surplus > 0 then
-            surplusFactor = surplusFactor + (surplus * 0.1) -- each extra item reduces time by 10%
-        end
-    end
-
-    if self.currentRecipe.consumption then
-        AddResourcesContinuous(self.teamId, self.currentRecipe.consumption)
+    if currentRecipe.consumption then
+        AddResourcesContinuous(self.teamId, currentRecipe.consumption)
     end
 
     self.craftingTime = (self.craftingTime) - 1 * surplusFactor
     if self.craftingTime <= 0 then
         -- Move items from input buffers to output buffers
-        for input, required in pairs(self.currentRecipe.inputs) do
+        for input, required in pairs(currentRecipe.inputs) do
             local inputBuffer = self:FindBuffer("input", input)
-            for i = 1, required do
+            for _=1, required do
                 table.remove(inputBuffer.items)
             end
         end
-
-        for output, quantity in pairs(self.currentRecipe.outputs) do
+        local pos = self.position -- not required if all outputs go to inserters
+        local angle = self.angle
+        for output, quantity in pairs(currentRecipe.outputs) do --Output Items to world at output buffer position or store in buffer if waiting for a inserter
             local outputBuffer = self:FindBuffer("output", output)
             for _=1, quantity do
                 if outputBuffer.inserterAttached then
                     table.insert(outputBuffer.items, output)
                 else
-                    -- Calculate spawn position based on buffer's relative position and module rotation
-                    local pos = GetDevicePosition(self.deviceId)
-                    local angle = GetDeviceAngle(self.deviceId) - 1.57079633
                     local spawnPos = RotatePosition(outputBuffer.relativePosition, angle)
                     spawnPos.x = pos.x + spawnPos.x
                     spawnPos.y = pos.y + spawnPos.y
@@ -480,9 +459,7 @@ end
 function Module:FindBuffer(bufferType, itemType)
     local buffers = bufferType == "input" and self.inputBuffers or self.outputBuffers
     for _, buffer in ipairs(buffers) do
-        if bufferType == "input" and buffer.itemTypes[itemType] then
-            return buffer
-        elseif bufferType == "output" and buffer.itemType == itemType then
+        if buffer.itemType == itemType then
             return buffer
         end
     end
@@ -496,7 +473,6 @@ function Module:GrabItemsAutomatically()
                 local pos = Object.pos
                 if buffer.hitbox:CheckCollision(pos) then
                     if buffer.itemTypes[Object.itemType] and #buffer.items < buffer.maxSize then
-                        -- Find connected inserter
                         for _, inserter in ipairs(self.connectedInserters) do
                             if inserter.inputModule == self then
                                 inserter:TakeOverEffect(Object)
@@ -510,6 +486,29 @@ function Module:GrabItemsAutomatically()
             end
         end
     end
+end
+
+function RemoveItemsFromBuffer(buffer)
+    
+end
+
+function Module:UpdateState()
+    local deviceId = self.deviceId
+    local angle = GetDeviceAngle(deviceId) - 1.57079633
+    local pos = GetDevicePosition(deviceId)
+    for _, buffer in ipairs(self.inputBuffers) do
+        local bufferPos = RotatePosition(buffer.relativePosition, angle)
+        bufferPos.x = pos.x + bufferPos.x
+        bufferPos.y = pos.y + bufferPos.y
+        buffer.bufferPos = bufferPos
+    end
+    --EMPED
+    --DISABLED (these two can be event based)
+    --NORECIPE (these two can be event based)
+    --NOPOWER
+    --DAMAGE (More useful for pipes/conveyors)
+    self.position = pos
+    self.angle = angle
 end
 
 ExistingInserters = {}
@@ -716,11 +715,11 @@ Hitbox = {
     size = { x = 0, y = 0 }
 }
 
-function Hitbox:New(pos, size)
+function Hitbox:New(pos, size) -- Add Sanity Checks?
     local hb = {}
     setmetatable(hb, self)
     self.__index = self
-    hb.size = { x = size.x / 2, y = size.y / 2 } -- Store half size
+    hb.size = { x = size.x / 2, y = size.y / 2 }
     hb:UpdatePosition(pos)
     return hb
 end
@@ -745,7 +744,16 @@ function RotatePosition(position, angle)
         z = 0
     }
 end
--- Helper function to rotate a point (x, y) by a given angle (in radians)
+function RotatePosition(position, angle)
+    local cosAngle = math.cos(angle)
+    local sinAngle = math.sin(angle)
+    return {
+        x = position.x * cosAngle - position.y * sinAngle,
+        y = position.x * sinAngle + position.y * cosAngle,
+        z = 0
+    }
+end
+
 function RotatePoint(x, y, angle)
     local cosAngle = math.cos(angle)
     local sinAngle = math.sin(angle)
@@ -756,50 +764,94 @@ function RotatePoint(x, y, angle)
 end
 
 function OnKey(key, down)
-    if key == "u" then
-        SpawnItems = down
+    if key == "u" and down then
+        CreateItem(ProcessedMousePos(),"IronOre")
     end
     if key == "i" and down then
         CreateItem(ProcessedMousePos(),"apple")
     end
     if key == "o" and down then
         if DebugMode then
-            for key, value in pairs(ExistingModules) do
+            for key, value in pairs(ExistingDeviceModules) do
                 value.craftingTime = 0
-                value.baseCraftingTime = 0.5
+                value.baseCraftingTime = 1
             end
         end
-        BetterLog(ExistingModules)
+        BetterLog(ExistingDeviceModules)
     end
     if key == "y" and down then
         PhysLib:Load()
     end
 end
 
---[[
-ModuleIndexMap = {} -- deviceId -> index lookup
+function ModuleReset() -- If a recipe gets changed a buffer may swap to not existing or a fluid buffer so either update visuals activly or otherwise check, If the recipe changes while a 
+--inserter is being placed "frame perfect" it may be plausable for a wrong inserter type to be attached
 
-function CreateModule(deviceName, deviceId)
-    local newModule = Module:New(deviceId)
-    ModuleCreationDefinitions[deviceName](newModule, deviceId)
-    table.insert(ExistingModules, newModule)
-    ModuleIndexMap[deviceId] = #ExistingModules
-    BetterLog(newModule)
 end
 
-function DestroyModule(deviceId)
-    local index = ModuleIndexMap[deviceId]
-    if index then
-        local module = ExistingModules[index]
-        -- ... existing drop items code ...
-        
-        -- Update index map for shifted modules
-        for i = index + 1, #ExistingModules do
-            ModuleIndexMap[ExistingModules[i].deviceId] = i - 1
-        end
-        
-        table.remove(ExistingModules, index)
-        ModuleIndexMap[deviceId] = nil
-    end
-end
-]]
+Recipes = { -- Don't use an input count of 0, it will cause a divide by 0
+    empty = {
+        baseTime = 99999,
+        inputs = {},
+        outputs = {},
+        surplusFactors = {}, -- 1x-2x input 0%-100% Added speed per update
+    },
+    derrick = {
+        oil = {
+            baseTime = 10,
+            inputs = {},
+            outputs = {["Oil"] = 6},
+            surplusFactors = {},
+        },
+    },
+    mine = {
+        ore = {
+            baseTime = 16,
+            inputs = {},
+            outputs = {["IronOre"] = 1},
+            surplusFactors = {},
+        },
+    },
+    mine2 = {
+        ore = {
+            baseTime = 11, --12 == ~1.333x
+            inputs = {},
+            outputs = {["IronOre"] = 1},
+            surplusFactors = {},
+        },
+    },
+    furnace = {
+        ironPlate = { --Furnace may swap recipe based on inputs?
+            baseTime = 22, --27.7 == 1.5 & 21.3 == 1.5 * max surplus
+            surplusFactors = {["IronOre"] = 0.05},
+            inputs = {["IronOre"] = 2},
+            outputs = {["IronPlate"] = 1},
+            consumption = Value(0,-10/25),
+        },
+    },
+    steelfurnace = {
+        ironPlate = {
+            baseTime = 18,
+            inputs = {["IronOre"] = 2},
+            outputs = {["IronPlate"] = 1},
+            consumption = Value(0,-12/25),
+            surplusFactors = {},
+        },
+    },
+    chemicalplant = {
+        sulfuricAcid = {
+            baseTime = 15,
+            inputs = {["IronPlate"] = 1},
+            outputs = {["SulfuricAcid"] = 10},
+            surplusFactors = {},
+        },
+    },
+    constructor = {
+        ammo = {
+            baseTime = 20,
+            inputs = {["IronPlate"] = 1},
+            outputs = {["Ammo"] = 2},
+            surplusFactors = {},
+        },
+    },
+}

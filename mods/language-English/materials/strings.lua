@@ -1,9 +1,21 @@
 Merge(Material,
 {
-    Conveyor = L"Conveyor",
+    --[[Conveyor = L"Conveyor",
     ConveyorTip2 = L"Pushes items to the right",
     ConveyorTip3 = L"Current movement system is testing only",
     ConveyorInverted = L"ConveyorInverted",
     ConveyorInvertedTip2 = L"Pushes items to the left",
-    ConveyorInvertedTip3 = L"Current movement system is testing only",
+    ConveyorInvertedTip3 = L"Current movement system is testing only",]]
+    c1l = L"Conveyor Left",
+    c1lTip2 = L"Pushes items to the left",
+    c1lTip3 = L"Current movement system is testing only",
+    c1r = L"Conveyor Right",
+    c1rTip2 = L"Pushes items to the right",
+    c1rTip3 = L"Current movement system is testing only",
+    c1pl = L"Conveyor PoweredL SHOULD NOT DISPLAY",
+    c1plTip2 = L"Pushes items to the right",
+    c1plTip3 = L"Current movement system is testing only",
+    c1pr = L"Conveyor PoweredR SHOULD NOT DISPLAY",
+    c1prTip2 = L"Pushes items to the left",
+    c1prTip3 = L"Current movement system is testing only",
 })

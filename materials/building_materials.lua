@@ -166,7 +166,7 @@ TextureTable = {
 }
 
 
-function ConstructSprites() 
+function ConstructSprites()
     for name, textures in pairs(TextureTable) do
         local frames = {}
         for i, texture in ipairs(textures) do
@@ -265,7 +265,7 @@ if c1l then
     c2l.ScrapTime = 4
     c2l.RepairRateMultiplier = 1.5
     c2l.Mass = 0.5
-    c2l.HitPoints = 300
+    c2l.HitPoints = 300 --armour at 1.8 MBC is 400
     c2l.MaxLinkLength = 185
     table.insert(Materials, c2l)
 
@@ -287,7 +287,7 @@ if c1l then
     local c3l = DeepCopy(c2l)
     c3l.SaveName = "c3l"
     c3l.Sprite = "c3l"
-    c3l.MetalBuildCost = 4
+    c3l.MetalBuildCost = 3.5
     c3l.MetalRepairCost = 3
     c3l.MetalReclaim = 3
     c3l.EnergyBuildCost = 6
@@ -296,7 +296,7 @@ if c1l then
     c3l.ScrapTime = 5
     c3l.RepairRateMultiplier = 1.5
     c3l.Mass = 0.7
-    c3l.HitPoints = 400
+    c3l.HitPoints = 480 -- Anti Howy Armor ++
     c3l.MaxLinkLength = 185
     table.insert(Materials, c3l)
 

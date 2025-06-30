@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "IronOre3",
+        Name = "MRA_IronOre3",
 
         States =
         {
@@ -12,7 +12,7 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/ores/IronOre3" },
+                    { texture = path .. "/effects/media/mainReleaseArt/ores/IronOre3" },
                     
 
                     duration = 0.04,
@@ -36,7 +36,7 @@ Effects =
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "IronOre3",
+        Sprite = "MRA_IronOre3",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,
