@@ -3,12 +3,26 @@ GlobalModuleIterator = 0
 ExistingFloatingModules = {}
 ExistingDeviceModules = {}
 ExistingInserters = {}
---"devices/metalstore/metal.tga"
+
+-- Active/Sleeping state tables
+ActiveDeviceModules = {}
+SleepingDeviceModules = {}
+ActiveInserters = {}
+SleepingInserters = {}
+
+-- Index maps for efficient removal
+DeviceModuleIndexMap = {} -- deviceId -> module lookup
+ModuleActiveIndexMap = {} -- module -> index in ActiveDeviceModules
+ModuleSleepingIndexMap = {} -- module -> index in SleepingDeviceModules
+InserterActiveIndexMap = {} -- inserter -> index in ActiveInserters
+InserterSleepingIndexMap = {} -- inserter -> index in SleepingInserters
+
 -- Constants
 local DEFAULT_BUFFER_SIZE = 2
 local DEFAULT_CRAFTING_TIME = 250 --10s TODO: Multi by 25 done not at recipe set
 local DEFAULT_INSERTER_SPEED = 10
 local DEFAULT_ITEM_SPACING = 0.2
+local DEFAULT_PICKUP_RADIUS = 50 -- Radius for automatic item pickup
 
 ModuleCreationDefinitions = {
     ["derrick"] = function (newModule)
@@ -73,71 +87,103 @@ function CreateModule(deviceName,deviceId) --Externally referred to as a device;
     local newModule = Module:New(deviceId)
     ModuleCreationDefinitions[deviceName](newModule,deviceId)
     table.insert(ExistingDeviceModules, newModule)
-    --    ModuleIndexMap[deviceId] = #ExistingModules
+    -- Start modules in sleeping state by default
+    table.insert(SleepingDeviceModules, newModule)
+    DeviceModuleIndexMap[deviceId] = newModule
+    ModuleSleepingIndexMap[newModule] = #SleepingDeviceModules
+    newModule:CheckAndUpdateState() -- Initial state check
 end
 
 function DestroyModule(deviceId)
-    --[[local index = ModuleIndexMap[deviceId]
-    if index then
-        local module = ExistingModules[index]
-        -- drop items
-        
-        -- Update index map for shifted modules
-        for i = index + 1, #ExistingModules do
-            ModuleIndexMap[ExistingModules[i].deviceId] = i - 1
+    local module = DeviceModuleIndexMap[deviceId]
+    if not module then return end
+    
+    local pos = GetDevicePosition(deviceId)
+    local angle = GetDeviceAngle(deviceId) - 1.57079633
+
+    -- Handle input buffers
+    for _, buffer in ipairs(module.inputBuffers) do
+        local bufferPos = RotatePosition(buffer.relativePosition, angle)
+        bufferPos.x = pos.x + bufferPos.x
+        bufferPos.y = pos.y + bufferPos.y
+
+        for _, item in ipairs(buffer.items) do
+            CreateItem(bufferPos, item)
+        end
+    end
+
+    -- Handle output buffers
+    for _, buffer in ipairs(module.outputBuffers) do
+        local bufferPos = RotatePosition(buffer.relativePosition, angle)
+        bufferPos.x = pos.x + bufferPos.x
+        bufferPos.y = pos.y + bufferPos.y
+
+        for _, item in ipairs(buffer.items) do
+            CreateItem(bufferPos, item)
+        end
+    end
+
+    -- Handle connected inserters
+    for _, inserter in ipairs(module.connectedInserters) do
+        -- Drop inserter contents at its current position
+        for _, item in ipairs(inserter.contents) do
+            CreateItem(inserter.currentPosition, item)
+        end
+
+        -- Remove inserter from all tables using index maps
+        for j, existingInserter in ipairs(ExistingInserters) do
+            if existingInserter == inserter then
+                table.remove(ExistingInserters, j)
+                break
+            end
         end
         
-        table.remove(ExistingModules, index)
-        ModuleIndexMap[deviceId] = nil
-    end]]
-    for i, module in ipairs(ExistingDeviceModules) do
-        if module.deviceId == deviceId then
-            local pos = GetDevicePosition(deviceId)
-            local angle = GetDeviceAngle(deviceId) - 1.57079633
+        local activeIndex = InserterActiveIndexMap[inserter]
+        if activeIndex then
+            local lastInserter = ActiveInserters[#ActiveInserters]
+            ActiveInserters[activeIndex] = lastInserter
+            InserterActiveIndexMap[lastInserter] = activeIndex
+            ActiveInserters[#ActiveInserters] = nil
+            InserterActiveIndexMap[inserter] = nil
+        end
+        
+        local sleepingIndex = InserterSleepingIndexMap[inserter]
+        if sleepingIndex then
+            local lastInserter = SleepingInserters[#SleepingInserters]
+            SleepingInserters[sleepingIndex] = lastInserter
+            InserterSleepingIndexMap[lastInserter] = sleepingIndex
+            SleepingInserters[#SleepingInserters] = nil
+            InserterSleepingIndexMap[inserter] = nil
+        end
+    end
 
-            -- Handle input buffers
-            for _, buffer in ipairs(module.inputBuffers) do
-                local bufferPos = RotatePosition(buffer.relativePosition, angle)
-                bufferPos.x = pos.x + bufferPos.x
-                bufferPos.y = pos.y + bufferPos.y
-
-                for _, item in ipairs(buffer.items) do
-                    CreateItem(bufferPos, item)
-                end
-            end
-
-            -- Handle output buffers
-            for _, buffer in ipairs(module.outputBuffers) do
-                local bufferPos = RotatePosition(buffer.relativePosition, angle)
-                bufferPos.x = pos.x + bufferPos.x
-                bufferPos.y = pos.y + bufferPos.y
-
-                for _, item in ipairs(buffer.items) do
-                    CreateItem(bufferPos, item)
-                end
-            end
-
-            -- Handle connected inserters
-            for _, inserter in ipairs(module.connectedInserters) do
-                -- Drop inserter contents at its current position
-                for _, item in ipairs(inserter.contents) do
-                    CreateItem(inserter.currentPosition, item)
-                end
-
-                -- Remove inserter from ExistingInserters
-                for j, existingInserter in ipairs(ExistingInserters) do
-                    if existingInserter == inserter then
-                        table.remove(ExistingInserters, j)
-                        break
-                    end
-                end
-            end
-
-            -- Remove module from ExistingModules
+    -- Remove module from all tables using index maps
+    for i, existingModule in ipairs(ExistingDeviceModules) do
+        if existingModule == module then
             table.remove(ExistingDeviceModules, i)
             break
         end
     end
+    
+    local activeIndex = ModuleActiveIndexMap[module]
+    if activeIndex then
+        local lastModule = ActiveDeviceModules[#ActiveDeviceModules]
+        ActiveDeviceModules[activeIndex] = lastModule
+        ModuleActiveIndexMap[lastModule] = activeIndex
+        ActiveDeviceModules[#ActiveDeviceModules] = nil
+        ModuleActiveIndexMap[module] = nil
+    end
+    
+    local sleepingIndex = ModuleSleepingIndexMap[module]
+    if sleepingIndex then
+        local lastModule = SleepingDeviceModules[#SleepingDeviceModules]
+        SleepingDeviceModules[sleepingIndex] = lastModule
+        ModuleSleepingIndexMap[lastModule] = sleepingIndex
+        SleepingDeviceModules[#SleepingDeviceModules] = nil
+        ModuleSleepingIndexMap[module] = nil
+    end
+    
+    DeviceModuleIndexMap[deviceId] = nil
 end
 --[[
 function UpdateModules()
@@ -192,99 +238,40 @@ function UpdateModules()
     end
 end]]
 function UpdateModules()
-    -- Update Modules
+    -- Update positions and states for all modules once per frame (including sleeping ones)
     for _, module in pairs(ExistingDeviceModules) do
         module:UpdateState()
+    end
+
+    -- Only process crafting for active modules
+    for _, module in pairs(ActiveDeviceModules) do
         module:GrabItemsAutomatically()
         module:UpdateCrafting()
+        
+        -- Check if module should go to sleep after processing
+        if not module:CanCraft() then
+            module:GoToSleep()
+        end
 
-        if module.deviceId then
-            -- Get device position
-            local pos = GetDevicePosition(module.deviceId)
-            local angle = GetDeviceAngle(module.deviceId) - 1.57079633
-
-            -- Helper function to update buffer positions
-            local function UpdateBufferPositions(buffers)
-                for _, buffer in ipairs(buffers) do
-                    -- Get relative position
-                    local relPos = buffer.relativePosition
-
-                    -- Rotate the relative position using the helper function
-                    local rotated = RotatePoint(relPos.x, relPos.y, -angle)
-
-                    local bufferPos = {
-                        x = pos.x + rotated.x,
-                        y = pos.y + rotated.y,
-                        z = -101
-                    }
-
-                    -- Update hitbox position if it exists
-                    if buffer.hitbox then
-                        buffer.hitbox:UpdatePosition(bufferPos)
-                    end
-
-                    -- Debugging visuals for buffer center
-                    if DebugMode then
-                        -- Draw a magenta circle at the center position of the buffer
-                        SpawnCircle(bufferPos, 5, Colour(255, 0, 255, 255), 0.1)
-                    end
-
-                    -- Debugging visuals for hitboxes
-                    if DebugMode and buffer.hitbox then
-                        -- Calculate the half size
-                        local halfSizeX = buffer.hitbox.size.x
-                        local halfSizeY = buffer.hitbox.size.y
-
-                        -- Define the corners relative to the buffer position
-                        local corners = {
-                            { x = -halfSizeX, y = -halfSizeY },
-                            { x =  halfSizeX, y = -halfSizeY },
-                            { x =  halfSizeX, y =  halfSizeY },
-                            { x = -halfSizeX, y =  halfSizeY },
-                        }
-
-                        -- Rotate and translate corners using the helper function
-                        local rotatedCorners = {}
-                        for i, corner in ipairs(corners) do
-                            local rotatedCorner = RotatePoint(corner.x, corner.y, -angle)
-                            table.insert(rotatedCorners, {
-                                x = bufferPos.x + rotatedCorner.x,
-                                y = bufferPos.y + rotatedCorner.y,
-                                z = -101
-                            })
-                        end
-
-                        -- Draw lines between the corners to form a green box
-                        for i = 1, 4 do
-                            local startCorner = rotatedCorners[i]
-                            local endCorner = rotatedCorners[(i % 4) + 1]
-                            SpawnLine(startCorner, endCorner, Colour(0, 255, 0, 255), 0.1)
-                        end
-                    end
-                end
-            end
-
-            -- Update input and output buffer positions
-            UpdateBufferPositions(module.inputBuffers)
-            UpdateBufferPositions(module.outputBuffers)
-
-            -- Debugging visuals for module position
-            if DebugMode then
-                -- Draw a blue circle at the module's position
-                SpawnCircle(pos, 15, Colour(0, 0, 255, 255), 0.1)
-            end
+        -- Debug visuals only for active modules
+        if DebugMode then
+            local pos = module.position
+            SpawnCircle(pos, 15, Colour(0, 0, 255, 255), 0.1)
         end
     end
 
-    -- Update Inserters
-    for _, inserter in pairs(ExistingInserters) do
+    -- Only update active inserters
+    for _, inserter in pairs(ActiveInserters) do
         inserter:Update()
+        
+        -- Check if inserter should go to sleep
+        if #inserter.itemsInTransit == 0 and #inserter.contents == 0 and not inserter:CanGrabNewItem() then
+            inserter:GoToSleep()
+        end
 
-        -- Inserter debugging visuals if needed
+        -- Debug visuals only for active inserters
         if DebugMode then
-            -- Draw a red line from start to end position
             SpawnLine(inserter.startPosition, inserter.endPosition, Colour(255, 0, 0, 255), 0.1)
-            -- Draw a yellow circle at the inserter's current position
             SpawnCircle(inserter.currentPosition, 5, Colour(255, 255, 0, 255), 0.1)
         end
     end
@@ -299,11 +286,12 @@ Module = {
     angle = 0,
     inputBuffers = {},
     outputBuffers = {},
-    connectedInserters = {},
     craftingTime = 0,
     baseCraftingTime = DEFAULT_CRAFTING_TIME,
     currentRecipe = nil,
     isGroundDevice = false,
+    isActive = false,
+    isEMPed = false,
 }
 
 -- Module Core Functions
@@ -321,9 +309,155 @@ function Module:New(deviceId)
     module.angle = GetDeviceAngle(deviceId) - 1.57079633
     module.inputBuffers = {}
     module.outputBuffers = {}
-    module.connectedInserters = {}
+    module.isActive = false
+    module.isEMPed = false
 
     return module
+end
+
+-- Wake/Sleep System
+function Module:WakeUp()
+    if not self.isActive and not self.isEMPed then
+        self.isActive = true
+        -- Move from sleeping to active table using index maps
+        local sleepingIndex = ModuleSleepingIndexMap[self]
+        if sleepingIndex then
+            local lastModule = SleepingDeviceModules[#SleepingDeviceModules]
+            SleepingDeviceModules[sleepingIndex] = lastModule
+            ModuleSleepingIndexMap[lastModule] = sleepingIndex
+            SleepingDeviceModules[#SleepingDeviceModules] = nil
+            ModuleSleepingIndexMap[self] = nil
+        end
+        table.insert(ActiveDeviceModules, self)
+        ModuleActiveIndexMap[self] = #ActiveDeviceModules
+
+        -- Wake up all connected inserters through buffers
+        for _, buffer in ipairs(self.inputBuffers) do
+            for _, inserter in ipairs(buffer.connectedInserters) do
+                inserter:WakeUp()
+            end
+        end
+        for _, buffer in ipairs(self.outputBuffers) do
+            for _, inserter in ipairs(buffer.connectedInserters) do
+                inserter:WakeUp()
+            end
+        end
+    end
+end
+
+function Module:GoToSleep()
+    if self.isActive then
+        self.isActive = false
+        -- Move from active to sleeping table using index maps
+        local activeIndex = ModuleActiveIndexMap[self]
+        if activeIndex then
+            local lastModule = ActiveDeviceModules[#ActiveDeviceModules]
+            ActiveDeviceModules[activeIndex] = lastModule
+            ModuleActiveIndexMap[lastModule] = activeIndex
+            ActiveDeviceModules[#ActiveDeviceModules] = nil
+            ModuleActiveIndexMap[self] = nil
+        end
+        table.insert(SleepingDeviceModules, self)
+        ModuleSleepingIndexMap[self] = #SleepingDeviceModules
+
+        -- Put all connected inserters to sleep through buffers
+        for _, buffer in ipairs(self.inputBuffers) do
+            for _, inserter in ipairs(buffer.connectedInserters) do
+                inserter:GoToSleep()
+            end
+        end
+        for _, buffer in ipairs(self.outputBuffers) do
+            for _, inserter in ipairs(buffer.connectedInserters) do
+                inserter:GoToSleep()
+            end
+        end
+    end
+end
+
+function Module:SetEMPed(emped)
+    if self.isEMPed ~= emped then
+        self.isEMPed = emped
+        if emped then
+            -- EMP puts module to sleep and propagates to buffers
+            self:GoToSleep()
+            self:UpdateBufferEMPStatus(true)
+        else
+            -- When EMP wears off, update buffers then check if module can wake up
+            self:UpdateBufferEMPStatus(false)
+            self:CheckAndUpdateState()
+        end
+    end
+end
+
+function Module:UpdateBufferEMPStatus(emped)
+    -- Update all buffers and their connected inserters
+    for _, buffer in ipairs(self.inputBuffers) do
+        buffer.isEMPed = emped
+        for _, inserter in ipairs(buffer.connectedInserters) do
+            if emped then
+                inserter:GoToSleep()
+            else
+                -- Only wake up if both connected modules are not EMPed
+                if not inserter:IsConnectedToEMPedModule() then
+                    inserter:WakeUp()
+                end
+            end
+        end
+    end
+    for _, buffer in ipairs(self.outputBuffers) do
+        buffer.isEMPed = emped
+        for _, inserter in ipairs(buffer.connectedInserters) do
+            if emped then
+                inserter:GoToSleep()
+            else
+                -- Only wake up if both connected modules are not EMPed
+                if not inserter:IsConnectedToEMPedModule() then
+                    inserter:WakeUp()
+                end
+            end
+        end
+    end
+end
+
+function Module:CanCraft()
+    local currentRecipe = self.currentRecipe
+    if not currentRecipe or self.isEMPed then return false end
+    
+    -- Check inputs
+    for input, required in pairs(currentRecipe.inputs) do
+        local inputBuffer = self:FindBuffer("input", input)
+        if not inputBuffer or #inputBuffer.items < required then
+            return false
+        end
+    end
+    
+    -- Check outputs have space
+    for output, quantity in pairs(currentRecipe.outputs) do
+        local outputBuffer = self:FindBuffer("output", output)
+        if not outputBuffer or #outputBuffer.items + quantity > outputBuffer.maxSize then
+            return false
+        end
+    end
+    
+    return true
+end
+
+function Module:CheckAndUpdateState()
+    if self:CanCraft() and not self.isActive then
+        self:WakeUp()
+    elseif not self:CanCraft() and self.isActive then
+        self:GoToSleep()
+    end
+end
+
+function Module:OnInputAdded()
+    -- Called when inserter adds item to input buffer
+    self:CheckAndUpdateState()
+end
+
+function Module:OnOutputRemoved()
+    -- Called when inserter removes item from output buffer
+    self:CheckAndUpdateState()
 end
 
 function Module:AddInputBuffer(bufferSize, itemType, hitbox, relativePosition)
@@ -331,10 +465,12 @@ function Module:AddInputBuffer(bufferSize, itemType, hitbox, relativePosition)
         maxSize = bufferSize or DEFAULT_BUFFER_SIZE,
         items = {},
         itemType = itemType or "",
-        hitbox = hitbox or Hitbox:New(GetDevicePosition(self.deviceId), Vec3(100, 100)),
         inserterAttached = false,
         relativePosition = relativePosition or {x = 0, y = 0},
         position = {x=0,y=0,z=0},
+        pickupRadius = DEFAULT_PICKUP_RADIUS,
+        connectedInserters = {},
+        isEMPed = false,
     }
     table.insert(self.inputBuffers, buffer)
 end
@@ -346,6 +482,8 @@ function Module:AddOutputBuffer(bufferSize, itemType, relativePosition)
         itemType = itemType or "",
         relativePosition = relativePosition or {x = 0, y = 0},
         position = {x=0,y=0,z=0},
+        connectedInserters = {},
+        isEMPed = false,
     }
     table.insert(self.outputBuffers, buffer)
 end
@@ -389,6 +527,8 @@ function Module:SetRecipe(recipe)
 
         k = k + 1
     end
+
+    self:CheckAndUpdateState() -- Check if new recipe allows crafting
 end
 
 --TODO: Pipes, likely just set priority per output and then full. Surplus: recipue based Per item surpluss, per all overload surpluss, Active Modules table? (if no output, if no input)
@@ -396,10 +536,17 @@ end
 
 --[[
 Module input buffers must be able to contain multiple item types at once, make inserters check for each type that the connected module wants and the recipe to properly set the input buffers item types
+WHY??? I DON'T UNDERSTAND, WHY
 ]]
 function Module:UpdateCrafting()
     local currentRecipe = self.currentRecipe
     if not currentRecipe then return end
+
+    -- Only update if we can actually craft (should always be true for active modules)
+    if not self:CanCraft() then
+        self:GoToSleep()
+        return
+    end
 
     local surplusFactor = 1
     -- Check if there are enough inputs to consume then find surplus factor
@@ -428,7 +575,7 @@ function Module:UpdateCrafting()
 
     self.craftingTime = (self.craftingTime) - 1 * surplusFactor
     if self.craftingTime <= 0 then
-        -- Move items from input buffers to output buffers
+
         for input, required in pairs(currentRecipe.inputs) do
             local inputBuffer = self:FindBuffer("input", input)
             for _=1, required do
@@ -468,19 +615,31 @@ end
 -- Update physics object grabbing
 function Module:GrabItemsAutomatically()
     for _, buffer in ipairs(self.inputBuffers) do
-        if not buffer.inserterAttached then
+        if not buffer.inserterAttached and #buffer.items < buffer.maxSize then
             for key, Object in pairs(ItemObjects) do
                 local pos = Object.pos
-                if buffer.hitbox:CheckCollision(pos) then
-                    if buffer.itemTypes[Object.itemType] and #buffer.items < buffer.maxSize then
-                        for _, inserter in ipairs(self.connectedInserters) do
-                            if inserter.inputModule == self then
-                                inserter:TakeOverEffect(Object)
-                                break
-                            end
+                local bufferPos = buffer.position
+                
+                -- Calculate distance using circular detection
+                local dx = pos.x - bufferPos.x
+                local dy = pos.y - bufferPos.y
+                local distance = math.sqrt(dx * dx + dy * dy)
+                
+                if distance <= buffer.pickupRadius and Object.itemType == buffer.itemType then
+                    -- Check if any connected inserter wants to take over this item
+                    local inserterTookOver = false
+                    for _, inserter in ipairs(buffer.connectedInserters) do
+                        if inserter.outputModule == self then
+                            inserter:TakeOverEffect(Object)
+                            inserterTookOver = true
+                            break
                         end
+                    end
+                    
+                    if not inserterTookOver then
                         table.insert(buffer.items, Object.itemType)
                         DestroyItem(Object, key)
+                        self:OnInputAdded() -- Wake up module if it can now craft
                     end
                 end
             end
@@ -496,19 +655,64 @@ function Module:UpdateState()
     local deviceId = self.deviceId
     local angle = GetDeviceAngle(deviceId) - 1.57079633
     local pos = GetDevicePosition(deviceId)
-    for _, buffer in ipairs(self.inputBuffers) do
-        local bufferPos = RotatePosition(buffer.relativePosition, angle)
-        bufferPos.x = pos.x + bufferPos.x
-        bufferPos.y = pos.y + bufferPos.y
-        buffer.bufferPos = bufferPos
+    
+    -- Check for EMP status (this should be event-based in real implementation)
+    -- self:SetEMPed(IsDeviceEMPed(deviceId))
+    
+    -- Update all buffer positions once per frame
+    local function UpdateBufferPositions(buffers)
+        for _, buffer in ipairs(buffers) do
+            local relPos = buffer.relativePosition
+            local rotated = RotatePoint(relPos.x, relPos.y, -angle)
+            
+            local bufferPos = {
+                x = pos.x + rotated.x,
+                y = pos.y + rotated.y,
+                z = -101
+            }
+            
+            buffer.position = bufferPos
+            
+            -- Debug visuals for buffers
+            if DebugMode then
+                -- Draw buffer center
+                SpawnCircle(bufferPos, 5, Colour(255, 0, 255, 255), 0.1)
+                
+                -- Draw pickup radius for input buffers without inserters
+                if buffer.pickupRadius and not buffer.inserterAttached then
+                    SpawnCircle(bufferPos, buffer.pickupRadius, Colour(0, 255, 0, 100), 0.1)
+                end
+            end
+        end
     end
-    --EMPED
-    --DISABLED (these two can be event based)
-    --NORECIPE (these two can be event based)
-    --NOPOWER
-    --DAMAGE (More useful for pipes/conveyors)
+    
+    UpdateBufferPositions(self.inputBuffers)
+    UpdateBufferPositions(self.outputBuffers)
+    
+    -- Update module position and angle
     self.position = pos
     self.angle = angle
+    
+    -- Update connected inserter positions
+    for _, inserter in ipairs(self.connectedInserters) do
+        inserter:UpdatePositions()
+    end
+end
+
+function InserterLogic() --example
+    --[[
+    Why was I woken?
+
+    Output inserters: 
+    Items to grab; Positions:
+    Inserter slot is full, outputbuffer does not need to loop wake, call wake on outputbuffer when inserter has space or just take from the buffer
+    Inserter is empty, inserter will handle output if more then 1 item
+    Item overload?; Module checks buffers every frame, when items are taken they will start working again
+    --Result: CheckInput function for inserters, WakeInserter for output buffers
+    Input inserters: 
+    Items to grab; Positions:
+    Inserter output slot is full, insert will update
+    ]]
 end
 
 ExistingInserters = {}
@@ -517,6 +721,8 @@ ExistingInserters = {}
 Inserter = {
     inputModule = nil,
     outputModule = nil,
+    inputBuffer = nil,
+    outputBuffer = nil,
     inputNode = nil,
     outputNode = nil,
     speed = DEFAULT_INSERTER_SPEED,
@@ -527,6 +733,8 @@ Inserter = {
     endPosition = {x = 0, y = 0},
     itemSpacing = DEFAULT_ITEM_SPACING,
     inputHitbox = nil,
+    isActive = false,
+    needsPositionUpdate = false,
 }
 
 function Inserter:New(o, speed)
@@ -541,8 +749,52 @@ function Inserter:New(o, speed)
     o.startPosition = {x = 0, y = 0}
     o.endPosition = {x = 0, y = 0}
     o.itemSpacing = DEFAULT_ITEM_SPACING
+    o.isActive = false
+    o.needsPositionUpdate = false
+    -- Start in sleeping state
+    table.insert(SleepingInserters, o)
+    InserterSleepingIndexMap[o] = #SleepingInserters
     
     return o
+end
+
+function Inserter:WakeUp()
+    if not self.isActive then
+        self.isActive = true
+        -- Check if connected modules/buffers allow waking up
+        if self:IsConnectedToEMPedModule() then
+            return -- Don't wake up if connected to EMPed modules
+        end
+        
+        -- Move from sleeping to active table using index maps
+        local sleepingIndex = InserterSleepingIndexMap[self]
+        if sleepingIndex then
+            local lastInserter = SleepingInserters[#SleepingInserters]
+            SleepingInserters[sleepingIndex] = lastInserter
+            InserterSleepingIndexMap[lastInserter] = sleepingIndex
+            SleepingInserters[#SleepingInserters] = nil
+            InserterSleepingIndexMap[self] = nil
+        end
+        table.insert(ActiveInserters, self)
+        InserterActiveIndexMap[self] = #ActiveInserters
+    end
+end
+
+function Inserter:GoToSleep()
+    if self.isActive then
+        self.isActive = false
+        -- Move from active to sleeping table using index maps
+        local activeIndex = InserterActiveIndexMap[self]
+        if activeIndex then
+            local lastInserter = ActiveInserters[#ActiveInserters]
+            ActiveInserters[activeIndex] = lastInserter
+            InserterActiveIndexMap[lastInserter] = activeIndex
+            ActiveInserters[#ActiveInserters] = nil
+            InserterActiveIndexMap[self] = nil
+        end
+        table.insert(SleepingInserters, self)
+        InserterSleepingIndexMap[self] = #SleepingInserters
+    end
 end
 
 function Inserter:CanGrabNewItem()
@@ -587,37 +839,60 @@ function Inserter:DisconnectFromModule(module)
     end
 end
 
+function Inserter:ConnectToBuffer(buffer)
+    if buffer then
+        table.insert(buffer.connectedInserters, self)
+        buffer.inserterAttached = true
+    end
+end
+
+function Inserter:DisconnectFromBuffer(buffer)
+    if buffer then
+        for i, inserter in ipairs(buffer.connectedInserters) do
+            if inserter == self then
+                table.remove(buffer.connectedInserters, i)
+                break
+            end
+        end
+        buffer.inserterAttached = #buffer.connectedInserters > 0
+    end
+end
+
 function Inserter:ConnectModules(input, output)
-    -- Disconnect from previous modules if any
-    self:DisconnectFromModule(self.inputModule)
-    self:DisconnectFromModule(self.outputModule)
+    -- Disconnect from previous connections
+    self:DisconnectFromBuffer(self.inputBuffer)
+    self:DisconnectFromBuffer(self.outputBuffer)
 
     if input.position then
         self.inputModule = input
+        self.inputBuffer = input -- input is actually a buffer
         self.inputNode = nil
         local angle = GetDeviceAngle(input.deviceId) - 1.57079633
         self.startPosition = RotatePosition(input.relativePosition, angle)
         self.startPosition.x = input.position.x + self.startPosition.x
         self.startPosition.y = input.position.y + self.startPosition.y
-        self:ConnectToModule(input)
+        self:ConnectToBuffer(input)
     else
         self.inputNode = input
         self.inputModule = nil
+        self.inputBuffer = nil
         self.startPosition = input.position
-        self.inputHitbox = Hitbox:New(input.position, {x = 1, y = 1})
+        self.inputHitbox = Hitbox:New(input.position, 25)
     end
 
     if output.position then
         self.outputModule = output
+        self.outputBuffer = output -- output is actually a buffer
         self.outputNode = nil
         local angle = GetDeviceAngle(output.deviceId) - 1.57079633
         self.endPosition = RotatePosition(output.relativePosition, angle)
         self.endPosition.x = output.position.x + self.endPosition.x
         self.endPosition.y = output.position.y + self.endPosition.y
-        self:ConnectToModule(output)
+        self:ConnectToBuffer(output)
     else
         self.outputNode = output
         self.outputModule = nil
+        self.outputBuffer = nil
         self.endPosition = output.position
     end
 
@@ -706,33 +981,31 @@ function Inserter:GetAllItemPositions()
     return positions
 end
 
--- Define a Hitbox with Collision Checking
+-- Simplified Hitbox for inserters only
 Hitbox = {
-    maxX = 0,
-    maxY = 0,
-    minX = 0,
-    minY = 0,
-    size = { x = 0, y = 0 }
+    centerX = 0,
+    centerY = 0,
+    radius = 0
 }
 
-function Hitbox:New(pos, size) -- Add Sanity Checks?
+function Hitbox:New(pos, radius)
     local hb = {}
     setmetatable(hb, self)
     self.__index = self
-    hb.size = { x = size.x / 2, y = size.y / 2 }
+    hb.radius = radius or 25
     hb:UpdatePosition(pos)
     return hb
 end
 
 function Hitbox:UpdatePosition(pos)
-    self.maxX = pos.x + self.size.x
-    self.maxY = pos.y + self.size.y
-    self.minX = pos.x - self.size.x
-    self.minY = pos.y - self.size.y
+    self.centerX = pos.x
+    self.centerY = pos.y
 end
 
 function Hitbox:CheckCollision(pos)
-    return pos.x < self.maxX and pos.x > self.minX and pos.y < self.maxY and pos.y > self.minY
+    local dx = pos.x - self.centerX
+    local dy = pos.y - self.centerY
+    return math.sqrt(dx * dx + dy * dy) <= self.radius
 end
 
 function RotatePosition(position, angle)
