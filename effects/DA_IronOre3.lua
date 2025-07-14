@@ -4,7 +4,7 @@ LifeSpan = 10e11
 Sprites =
 {
     {
-        Name = "MRA_IronOre3",
+        Name = "DA_IronOre3",
 
         States =
         {
@@ -36,7 +36,7 @@ Effects =
         LocalVelocity = { x = 0, y = 0, z = 0 },
         Acceleration = { x = 0, y = 0, z = 0 },
         Drag = 0.0,
-        Sprite = "MRA_IronOre3",
+        Sprite = "DA_IronOre3",
         Additive = false,
         TimeToLive = 10e11,
         Angle = 0,

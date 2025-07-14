@@ -12,7 +12,7 @@ Sprites =
             {
                 Frames =
                 {
-                    { texture = path .. "/effects/media/ores/IronOre2" },
+                    { texture = path .. "/effects/media/mainReleaseArt/ores/IronOre2" },
                     
 
                     duration = 0.04,

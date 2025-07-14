@@ -85,6 +85,10 @@ function OnGroundDeviceCreated(teamId, deviceId, saveName, pos, upgradedId)
     PhysLib:OnGroundDeviceCreated(teamId, deviceId, saveName, pos, upgradedId)
 end
 
+function OnDeviceTeamUpdated(oldTeamId, newTeamId, deviceId, saveName)
+    UpdateModuleTeam(deviceId,newTeamId)
+end
+
 function OnNodeCreated(nodeId, teamId, pos, foundation, selectable, extrusion)
     PhysLib:OnNodeCreated(nodeId, teamId, pos, foundation, selectable, extrusion)
 end
